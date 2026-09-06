@@ -1,4 +1,23 @@
 # Except Sandbox environment
-
 ./sandbox
 /sandbox
+sandbox/
+
+# Runtime Persistence & Spool Buffers [INV-FS-23]
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/spool/
+data/cache/
+cortex_spool.jsonl
+*.db
+*.db-wal
+*.db-shm
+
+# Python Bytecode & Environments
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+venv/
+.venv/

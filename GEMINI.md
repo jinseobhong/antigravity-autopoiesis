@@ -87,20 +87,36 @@ graph TD
 ```
 
 - **Tier 1 (Low Risk - Autonomous Execution)**:
-  - Documentation updates, typing annotations, non-breaking additive companion tests, read-only inspections.
+  - Non-constitutional internal documentation updates, typing annotations, non-breaking additive companion tests, read-only inspections.
+  - *Exclusion*: Modifications to `GEMINI.md`, foundational rules (`docs/rules/*.md`), specs (`docs/specs/*.md`), and active contracts (`docs/active/*.md`) are strictly excluded from Tier 1.
   - *Gate*: Automated lint and formatting check.
 - **Tier 2 (Medium Risk - Preflight Verification Required)**:
   - Internal algorithm refactoring, isolated bugfixes, private helper methods with complete companion test coverage.
   - *Gate*: Automated in-process test pass (`pytest`) + zero lint errors.
 - **Tier 3 (High Risk - Mandatory User Agreement)**:
-  - Database schema alterations, data drops, authentication/authorization mutations, public API signature modifications, configuration defaults changes, external network integrations.
-  - *Gate*: Explicit human confirmation in chat prior to executing file modifications.
+  - Constitutional modifications (`GEMINI.md`), authoritative specifications (`docs/specs/*.md`, `docs/rules/*.md`, `docs/active/ACTIVE_CONTRACT.md`), database schema alterations, data drops, authentication/authorization mutations, public API signature modifications, configuration defaults changes, external network integrations.
+  - *Gate*: Explicit prior human confirmation token in chat prior to executing file modifications.
+  - *Post-Action Invariant*: Immediate post-execution report containing the complete, verbatim unified git diff (`git diff`).
 
 ```bash
 # Automated Blast Radius Pre-Check Command
 python scripts/audit_blast_radius.py --diff-target HEAD
 # Output: [TIER_1_PASS] | [TIER_2_PREFLIGHT_REQUIRED] | [TIER_3_USER_APPROVAL_LOCKED]
 ```
+
+### 2.4 Strict Prohibition of Tacit Approval & Timeout Auto-Advance (MUST)
+- **Silence Is Not Consent (묵시적 승인 금지)**:
+  - In the absence of an explicit, affirmative operator authorization token in chat, autonomous agents, orchestrators, and subagents SHALL NOT assume approval, infer consent from operator silence, or auto-select default/recommended options.
+  - When an interactive elicitation (ask_question) receives no operator response or times out, the task or contract proposal SHALL NOT advance to ACCEPTED, PLANNED, or IN_PROGRESS.
+  - The task/inquiry MUST immediately be assigned [ON_HOLD] or [PARKED] status with an explicit audit reason record. Workflow execution SHALL halt until the human operator explicitly reactivates or approves it.
+
+### 2.5 Constitutional & Specification Immutability Gate (사전 승인 및 사후 diff 보고 의무)
+- **Mandatory Pre-Approval**: Autonomous agents SHALL NOT modify `GEMINI.md`, `docs/rules/*.md`, `docs/specs/*.md`, or `docs/active/ACTIVE_CONTRACT.md` without presenting:
+  1. Detailed justification and background
+  2. Exact list of files to be modified
+  3. Executive summary of proposed changes
+  and receiving an affirmative authorization token from the human operator.
+- **Mandatory Post-Execution Diff Disclosure**: Immediately after promoting any change to `GEMINI.md` or specification documents, the agent MUST deliver a post-execution report containing the complete, verbatim `git diff` patch block for immediate human verification.
 
 ---
 

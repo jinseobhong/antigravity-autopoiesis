@@ -54,7 +54,12 @@ class DocPreapprovalLinter:
         self.lines = self.content.splitlines()
         self.defects: List[ComplianceDefect] = []
         normalized = filepath.replace("\\", "/").lower()
-        self.is_agent_or_skill = ".agents" in normalized or normalized.endswith("skill.md")
+        self.is_agent_or_skill = (
+            ".agents" in normalized
+            or normalized.endswith("skill.md")
+            or "/rules/" in normalized
+            or normalized.startswith("docs/rules")
+        )
 
     def lint(self) -> List[ComplianceDefect]:
         """Executes quantitative base audit and enhanced pre-approval checks."""

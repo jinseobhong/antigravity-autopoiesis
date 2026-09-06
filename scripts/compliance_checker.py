@@ -10,6 +10,7 @@ from dataclasses import dataclass
 import os
 import re
 import sys
+import time
 from typing import Any, Dict, List, Optional, Tuple
 
 
@@ -173,8 +174,14 @@ class DocComplianceAuditor:
     def __init__(self, filename: str, content: str) -> None:
         self.filename = filename
         normalized = filename.replace("\\", "/").lower()
-        self.is_agent_or_skill = ".agents" in normalized or normalized.endswith("skill.md")
-        self.is_rule_def = "documentation_tone" in normalized or self.is_agent_or_skill
+        self.is_constitution = normalized.endswith("gemini.md")
+        self.is_agent_or_skill = (
+            ".agents" in normalized
+            or normalized.endswith("skill.md")
+            or "/rules/" in normalized
+            or normalized.startswith("docs/rules")
+        )
+        self.is_rule_def = "documentation_tone" in normalized or "rules" in normalized or self.is_agent_or_skill
         self.content = content.lstrip("\ufeff")
         self.lines = self.content.splitlines()
         self.defects: List[ComplianceDefect] = []
@@ -189,6 +196,9 @@ class DocComplianceAuditor:
 
     def _audit_frontmatter(self) -> None:
         """Ensures document has valid YAML frontmatter appropriate for its type."""
+        if self.is_constitution:
+            return
+
         if not self.content.startswith("---"):
             self.defects.append(ComplianceDefect(
                 type="MISSING_FRONTMATTER",
@@ -234,32 +244,40 @@ class DocComplianceAuditor:
                     message=f"Unquantified adjective '{match.group(0).lower()}' is prohibited"
                 ))
 
+    def _strip_frontmatter_lines(self) -> List[str]:
+        """Returns lines with frontmatter stripped if present."""
+        if not self.lines or self.lines[0].strip() != "---":
+            return self.lines
+        for idx in range(1, len(self.lines)):
+            if self.lines[idx].strip() == "---":
+                return self.lines[idx + 1 :]
+        return self.lines
+
+    def _extract_prose_lines(self) -> List[str]:
+        """Extracts lines outside of fenced code blocks."""
+        body_lines = self._strip_frontmatter_lines()
+        prose: List[str] = []
+        in_fence = False
+        fence_marker = ""
+
+        for line in body_lines:
+            stripped = line.strip()
+            if not in_fence and stripped.startswith("```"):
+                in_fence = True
+                match = re.match(r"^`+", stripped)
+                fence_marker = match.group(0) if match else "```"
+                continue
+            if in_fence and stripped.startswith(fence_marker):
+                in_fence = False
+                fence_marker = ""
+                continue
+            if not in_fence:
+                prose.append(line)
+        return prose
+
     def _count_h1_headings(self) -> int:
         """Counts top-level H1 headings excluding frontmatter and code blocks."""
-        h1_count = 0
-        in_code_block = False
-        in_frontmatter = False
-
-        for idx, line in enumerate(self.lines):
-            stripped = line.strip()
-            if idx == 0 and stripped == "---":
-                in_frontmatter = True
-                continue
-            if in_frontmatter:
-                if stripped == "---":
-                    in_frontmatter = False
-                continue
-
-            if stripped.startswith("```"):
-                in_code_block = not in_code_block
-                continue
-
-            if in_code_block:
-                continue
-
-            if line.startswith("# "):
-                h1_count += 1
-        return h1_count
+        return sum(1 for line in self._extract_prose_lines() if line.startswith("# "))
 
     def _audit_single_h1(self) -> None:
         """Ensures document has exactly one top-level H1 header outside code blocks."""
@@ -368,21 +386,40 @@ def _collect_target_files(paths: List[str]) -> List[str]:
     return sorted(collected)
 
 
-def run_cli(target_paths: List[str]) -> int:
-    """CLI runner executing compliance audit across paths."""
-    total_defects = 0
-    targets = _collect_target_files(target_paths)
+def _print_compact_report(
+    targets: List[str],
+    failing_files: List[Tuple[str, List[ComplianceDefect]]],
+    duration: float,
+) -> int:
+    """Outputs single-line pass or concise defect coordinates."""
+    total_defects = sum(len(defs) for _, defs in failing_files)
+    if total_defects == 0:
+        print(f"[PASS] Compliance Gate: {len(targets)} files audited (0 defects) in {duration:.2f}s")
+        return 0
 
+    print(f"[FAIL] Compliance Gate: {total_defects} defect(s) detected across {len(failing_files)} file(s):")
+    for path, defects in failing_files:
+        print(f"  {path}:")
+        for d in defects:
+            print(f"    - L{d.line}: [{d.type}] {d.message}")
+    return 1
+
+
+def _print_standard_report(
+    targets: List[str],
+    failing_files: List[Tuple[str, List[ComplianceDefect]]],
+) -> int:
+    """Outputs verbose per-file audit report and summary banner."""
+    total_defects = sum(len(defs) for _, defs in failing_files)
     print("================================================================================")
     print("  FAST-PATH QUANTITATIVE COMPLIANCE AUDITOR (Tier 1)")
     print("================================================================================")
 
+    failing_map = dict(failing_files)
     for path in targets:
-        _, defects = audit_file(path)
-        if defects:
-            total_defects += len(defects)
+        if path in failing_map:
             print(f"\n[FAIL] {path}")
-            for d in defects:
+            for d in failing_map[path]:
                 print(f"  - L{d.line}: [{d.type}] {d.message}")
         else:
             print(f"[PASS] {path}")
@@ -399,6 +436,31 @@ def run_cli(target_paths: List[str]) -> int:
     return 0
 
 
+def run_cli(target_paths: Optional[List[str]] = None) -> int:
+    """CLI runner executing compliance audit across paths."""
+    args = target_paths if target_paths is not None else sys.argv[1:]
+    compact_mode = False
+    clean_paths: List[str] = []
+    for a in args:
+        if a in ("--compact", "-q", "--quiet"):
+            compact_mode = True
+        else:
+            clean_paths.append(a)
+
+    targets = _collect_target_files(clean_paths if clean_paths else ["."])
+    failing_files: List[Tuple[str, List[ComplianceDefect]]] = []
+    start_time = time.perf_counter()
+
+    for path in targets:
+        _, defects = audit_file(path)
+        if defects:
+            failing_files.append((path, defects))
+
+    duration = time.perf_counter() - start_time
+    if compact_mode:
+        return _print_compact_report(targets, failing_files, duration)
+    return _print_standard_report(targets, failing_files)
+
+
 if __name__ == "__main__":
-    targets = sys.argv[1:] if len(sys.argv) > 1 else ["."]
-    sys.exit(run_cli(targets))
+    sys.exit(run_cli())

@@ -1,3 +1,13 @@
+---
+id: "ARCH-20260907-physical-blueprint"
+title: "Antigravity Lean Cortex: Physical System Blueprint"
+status: "ACCEPTED"
+owner: "Platform Architecture Team"
+last_reviewed: "2026-09-07"
+dependencies:
+  - "GEMINI.md"
+---
+
 # Antigravity Lean Cortex: Physical System Blueprint (ARCHITECTURE.md v2.0)
 
 > [!CAUTION]

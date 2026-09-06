@@ -1,0 +1,16 @@
+{
+  "ivv-guard": {
+    "PreToolUse": [
+      {
+        "matcher": "write_to_file|replace_file_content",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python ../scripts/guard_ivv_pipeline.py",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

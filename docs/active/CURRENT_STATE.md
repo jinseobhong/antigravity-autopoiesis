@@ -28,7 +28,7 @@ dependencies:
 - **Current Operational Phase**: Phase 1 (Governance Hardening & Verification Foundation).
 - **Active Sprint Horizon**: Sprint 1 ("Governance Hardening & Self-Verification Engine").
 - **Core Trade-Off**: Strict preflight gating and sandbox isolation impose an authoring latency tax (+15% to +25% per cycle) to guarantee 0% production regression rates and sub-30-second atomic rollbacks.
-- **Active Task Capacity**: 2 of 5 active slots occupied (40% capacity utilization; 3 slots available).
+- **Active Task Capacity**: 0 of 5 active slots occupied (0% utilization; 5 slots available).
 
 ### 1.2 On-Call Incident Fast-Path (< 30 Seconds)
 **Severity Classification**: SEV-1 (Trunk Regression / Data Loss) | SEV-2 (Gate / Harness Deadlock)  
@@ -57,6 +57,8 @@ stateDiagram-v2
     [*] --> REQUESTED: Operator Submits Task
     REQUESTED --> PLANNED: Plan Approved
     REQUESTED --> REJECTED: Operator Declines Proposal
+    REQUESTED --> ON_HOLD: No Operator Response / Timeout
+    ON_HOLD --> REQUESTED: Operator Reactivated
     PLANNED --> IN_PROGRESS: Slot Allocated in Horizon
     PLANNED --> PARKED: Horizon Capacity Saturated
     PARKED --> IN_PROGRESS: Slot Vacated & Dispatched
@@ -109,6 +111,7 @@ flowchart LR
 2. **Overflow Parking Protocol**: When all 5 active slots are occupied, any newly approved task MUST receive `PARKED` status.
 3. **Storage Invariant**: Parked tasks MUST be persisted into `cortex.db` with an explicit reason record. Prior to Milestone 4 implementation of `cortex.db`, parked tasks MUST use filesystem fallback storage (`sandbox/state/parked_tasks.json`).
 4. **Promotion Replenishment**: When an active task transitions to `PROMOTED` or `ROLLED_BACK`, the highest-priority `PARKED` task MAY transition to `IN_PROGRESS`.
+5. **Silence Is Not Consent Invariant (묵시적 승인 금지)**: When an interactive elicitation (`ask_question`), review panel, or task proposal encounters a timeout or absence of explicit operator response, the task MUST NOT auto-advance to `PLANNED` or `IN_PROGRESS`. It MUST transition to `ON_HOLD` or `PARKED` with an explicit reason record, awaiting sovereign operator reactivation.
 
 ---
 
@@ -119,15 +122,15 @@ flowchart LR
 ```mermaid
 flowchart TD
     subgraph ColRequested ["1. REQUESTED"]
-        REQ_101["TASK-008: LFU Cache Vacuuming Routine"]
+        REQ_100["[No Requested Tasks]"]
     end
 
     subgraph ColPlanned ["2. PLANNED"]
-        PLN_101["TASK-006: Out-of-Process Warm Runner Harness"]
+        PLN_100["[No Planned Tasks]"]
     end
 
     subgraph ColParked ["PARKED (cortex.db)"]
-        PRK_101["TASK-007: SQLite Cortex Knowledge Persistence"]
+        PRK_100["[No Parked Tasks]"]
     end
 
     subgraph ColActive ["3. IN_PROGRESS (Horizon)"]
@@ -145,6 +148,29 @@ flowchart TD
         PRM_104["TASK-004: Compliance Checker Engine (v1.0)"]
         PRM_105["TASK-005: State Ledger Specification (v2.0)"]
         PRM_109["TASK-009: Pre-Approval Doc Lint Gate (v1.0)"]
+        PRM_110["TASK-010: Socratic Interviewer & Active Contract (v1.0)"]
+        PRM_111["TASK-011: Socratic Interviewer Hardening (v1.1)"]
+        PRM_112["TASK-012: Tri-Domain Cortex Document Archiving (v1.0)"]
+        PRM_113["TASK-013: Filesystem Topology Standards (v1.0)"]
+        PRM_114["TASK-014: Standalone Agent Runner & Execution Harness (v1.0)"]
+        PRM_115["TASK-015: Lead Software Engineer Persona & Delegation Protocol (v1.0)"]
+        PRM_116["TASK-016: Autonomous Agent Registry Specification (v1.0)"]
+        PRM_117["TASK-017: Independent QA Engineer & Decoupled IV&V (v1.0)"]
+        PRM_107["TASK-007: SQLite Cortex Knowledge Persistence (v1.0)"]
+        PRM_118["TASK-018: Modular Multi-Agent & Dual QA Pipeline (v4.0)"]
+        PRM_106["TASK-006: Out-of-Process Warm Runner Harness (v1.0)"]
+        PRM_119["TASK-019: System Hygiene, Sanitation & Technical Debt Elimination (v1.0)"]
+        PRM_120["TASK-020: Core Test Engine Encapsulation & Facade Bridge (v1.0)"]
+        PRM_121["TASK-021: Closed-Loop Continuous Learning & Grounding System (v1.0)"]
+        PRM_122["TASK-022: Context Diet & Attention Shielding Architecture (v1.0)"]
+        PRM_123["TASK-023: Automated IV&V Lifecycle Enforcement Hook (v1.0)"]
+        PRM_124["TASK-024: Active Contract Gate & SSOT Lifecycle Hardening (v1.0)"]
+        PRM_125["TASK-025: Preflight Defect Diagnostics & Cortex Ingestion (v1.0)"]
+        PRM_126["TASK-026: Requirements Extractor & Subprocess Backprop Pipeline (v1.0)"]
+        PRM_108["TASK-008: Scheduled LFU Cache Vacuuming Routine (v1.0)"]
+        PRM_127["TASK-027: Mechanical Interface Skeleton Baker & AST Docking Linker (v1.0)"]
+        PRM_128["TASK-028: Dialectical Requirements Interrogator & Adversarial Red Team Engine (v1.0)"]
+        PRM_129["TASK-029: Resilient Exponential Backoff Retry Policy Engine (v1.0)"]
     end
 
     ColPlanned -->|"Assign Available Slot"| ColActive
@@ -162,9 +188,29 @@ flowchart TD
 | **`TASK-004`** | Implement Quantitative Compliance Checker | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Engineer | 22 unit tests passed (0.015s) |
 | **`TASK-005`** | Author State Ledger & Sprint Compass Specification | `PROMOTED` | 0/2 | Tier 1 (Docs) | Technical Writer | 100% Doc review pass (98.4/100) |
 | **`TASK-009`** | Implement Pre-Approval Doc Lint Gate & Hardened Example | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Engineer | 28 unit tests passed; Clean AST |
-| **`TASK-006`** | Implement Out-of-Process Warm Runner Harness | `PLANNED` | 0/2 | Tier 2 (Code) | Systems Engineer | Pending execution slot |
-| **`TASK-007`** | Implement SQLite Cortex Knowledge Persistence | `PARKED` | 0/2 | Tier 2 (Code) | Database Engineer | Parked: Horizon slot ceiling |
-| **`TASK-008`** | Implement LFU Cache Vacuuming Scheduled Routine | `REQUESTED` | 0/2 | Tier 2 (Code) | Systems Engineer | Pending architecture review |
+| **`TASK-010`** | Implement Socratic Interviewer & Active Contract Gate | `PROMOTED` | 0/2 | Tier 1 (Docs) | Agent Architect | 100% Preflight passed; Clean AST |
+| **`TASK-011`** | Harden Socratic Interviewer & Active Contract Gate | `PROMOTED` | 0/2 | Tier 2 (Agent Spec) | Agent Architect | 100% Preflight passed; Clean AST |
+| **`TASK-012`** | Implement Tri-Domain Cortex Document Archiving | `PROMOTED` | 0/2 | Tier 2 (Code) | Database Engineer | 19 companion tests pass (0.67s); Clean AST |
+| **`TASK-013`** | Implement Filesystem Topology Standards & Engine | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Engineer | 21 companion tests pass (0.054s); Audit pass (6.7ms); Clean AST |
+| **`TASK-014`** | Implement Standalone Subprocess Agent Runner & Execution Harness | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Engineer | 17 companion tests pass (0.90s); 100% compliance gate; Clean AST |
+| **`TASK-015`** | Lead Software Engineer Persona & Delegation Protocol | `PROMOTED` | 0/2 | Tier 1 (Agent Spec) | Platform Architect | 100% compliance pass (3/3 files); Subprocess pass (0.11s) |
+| **`TASK-016`** | Author Autonomous Agent Registry Specification | `PROMOTED` | 0/2 | Tier 1 (Docs) | Platform Architect | 100% Pre-Approval Lint pass; 100% compliance pass; Clean AST |
+| **`TASK-017`** | Implement Independent QA Engineer & Decoupled IV&V Pipeline | `PROMOTED` | 0/2 | Tier 2 (Code/Agent) | Platform Lead | 100% compliance pass (5/5 files); Subprocess pass; 85 unit tests pass |
+| **`TASK-006`** | Implement Out-of-Process Warm Runner Harness | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Engineer | 131 unit tests passed; 3.0s watchdog ceiling; Clean AST |
+| **`TASK-007`** | Implement SQLite Cortex Knowledge Persistence | `PROMOTED` | 0/2 | Tier 2 (Code) | Database Engineer | 106 unit tests passed (3.37s); FTS5 < 15ms; Clean AST |
+| **`TASK-008`** | Implement LFU Cache Vacuuming Scheduled Routine | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Engineer | 33 companion tests pass (0.97s); 294 full tests pass; Clean AST; Fail-open verified. |
+| **`TASK-018`** | Implement Modular Multi-Agent & Dual QA Pipeline (v4.0) | `PROMOTED` | 0/2 | Tier 2 (Agent Spec) | Platform Architect | 119 unit tests passed; 46.2% negative ratio; Clean AST |
+| **`TASK-019`** | System Hygiene, Sanitation & Technical Debt Elimination | `PROMOTED` | 0/2 | Tier 3 (Governance) | Systems Lead | 100% compliance pass (34/34 files, 0 defects); 131 tests pass |
+| **`TASK-020`** | Core Test Engine Encapsulation & Facade Bridge | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Architect | 100% compliance pass (38/38 files, 0 defects); 132 tests pass |
+| **`TASK-021`** | Closed-Loop Continuous Learning & Grounding System | `PROMOTED` | 0/2 | Tier 2 (Code) | Platform Lead | 100% compliance pass (38/38 files, 0 defects); Grounding CLI verified; 135 tests pass |
+| **`TASK-022`** | Context Diet & Attention Shielding Architecture | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Architect | 100% preflight pass (39 files, 70 topology, 146 tests); Clean AST |
+| **`TASK-023`** | Automated IV&V Lifecycle Enforcement Hook | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Architect | 100% preflight pass (41 files, 73 topology, 165 tests); Clean AST |
+| **`TASK-024`** | Active Contract Gate & SSOT Lifecycle Hardening | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Architect | 100% preflight pass (44 files, 76 topology, 193 tests); Clean AST |
+| **`TASK-025`** | Automated Preflight Defect Diagnostics & Cortex Ingestion | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Architect | 31 companion tests pass (0.35s); 224 full tests pass; Clean AST; Fail-open verified. |
+| **`TASK-026`** | Requirements Extractor & Subprocess Backpropagation Pipeline | `PROMOTED` | 0/2 | Tier 2 (Code) | Platform Architect | 32 companion tests pass (1.54s); 261 full tests pass; Clean AST; Fail-open verified. |
+| **`TASK-027`** | Mechanical Interface Skeleton Baker & AST Docking Linker | `PROMOTED` | 0/2 | Tier 2 (Code) | Platform Lead | 50 companion tests pass (0.74s); 344 full tests pass; Clean AST; Fail-open verified. |
+| **`TASK-028`** | Dialectical Requirements Interrogator & Adversarial Red Team Engine | `PROMOTED` | 0/2 | Tier 2 (Code) | Platform Lead | 31 companion tests pass (8.11s); 375 full tests pass; Clean AST; Fail-open verified. |
+| **`TASK-029`** | Resilient Exponential Backoff Retry Policy Engine | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Engineer | 45 companion tests pass (0.35s); 420 full tests pass; Clean AST; AST Docked; Fail-open verified. |
 
 ---
 
@@ -199,6 +245,7 @@ Technical directives and system invariants are defined below conforming to NASA 
 - `[REQ-STATE-10]` Python source code SHALL limit function parameter counts to at most 7 parameters.
 - `[REQ-STATE-11]` The system SHALL execute compliance verification in less than 500 milliseconds.
 - `[REQ-STATE-12]` All candidate production diffs MUST include a corresponding reverse-patch rollback script.
+- `[REQ-STATE-13]` Post-execution reporting for all governance, specification, and architectural state transitions SHALL provide full, unabridged Korean architectural exposition alongside verbatim unified diffs.
 
 ### 5.2 Procedural Directives for Engineers and Operators
 - **DO**: Run `python scripts/compliance_checker.py` before proposing pull requests.
@@ -211,6 +258,12 @@ Technical directives and system invariants are defined below conforming to NASA 
 ---
 
 ## 6. Epistemic Ledger (Facts, Assumptions, Hypotheses)
+
+> [!NOTE]
+> ### Validated Fact `[FACT-AUTO-TASK-026-TEST]`
+> - **Source / Evidence**: Falsified assumption transitioned via task TASK-026-TEST.
+> - **Validated Finding**: Windows sleep without jitter causes SQLite lock
+
 
 Major system assertions are formally categorized to guarantee epistemic integrity:
 

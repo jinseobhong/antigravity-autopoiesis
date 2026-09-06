@@ -3,7 +3,7 @@ name: "documentation_tone"
 description: "Enforces RFC 2119/NASA-aligned normative lexicon (SHALL, SHOULD, MAY, DO, DON'T), epistemic honesty, and automated Vale linting for technical documentation."
 globs:
   - "docs/**/*.md"          # 실제 프로젝트 기술 명세, 아키텍처, 런북
-  - ".agents/rules/*.md"    # 레포지토리 표준 및 불변식 규격서
+  - "docs/rules/*.md"    # 레포지토리 표준 및 불변식 규격서
   - ".agents/agents/*.md"   # 전문 에이전트 페르소나 정의서
   - ".agents/skills/**/*.md"  
 ---
