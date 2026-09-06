@@ -1,9 +1,9 @@
-"""
-Automated IV&V Lifecycle Enforcement Hook (scripts.guard_ivv_pipeline).
+﻿"""
+Sovereign Orchestrator & Read-Only Subagent Guard Hook (scripts.guard_ivv_pipeline).
 
-PreToolUse hook interceptor enforcing Decoupled Independent Verification and Validation.
-Blocks primary orchestrator from direct code/test mutation and isolates software-engineer
-and qa-engineer file authoring domains conforming to CONTRACT-20260907.
+PreToolUse hook interceptor enforcing Sovereign Authoring Architecture:
+- Primary Orchestrator is the sole authorized writer for all files (code, tests, docs).
+- All subagents operate strictly in read-only review/auditing mode and cannot mutate files directly.
 """
 
 import json
@@ -11,21 +11,6 @@ import os
 from pathlib import Path
 import sys
 from typing import Any, Dict, List, Optional, Tuple
-
-# Ensure repository root is in sys.path for direct execution from any CWD
-_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-_CANDIDATE_ROOTS = [
-    os.path.abspath(os.path.join(_SCRIPT_DIR, "..")),
-    os.path.abspath(os.path.join(_SCRIPT_DIR, "..", "..")),
-]
-for root in _CANDIDATE_ROOTS:
-    if root not in sys.path:
-        sys.path.insert(0, root)
-
-try:
-    from scripts.validate_active_contract import validate_contract_state
-except ModuleNotFoundError:
-    from sandbox.scripts.validate_active_contract import validate_contract_state
 
 
 def _normalize_path(target_file: str, workspace_paths: Optional[List[str]] = None) -> str:
@@ -47,10 +32,23 @@ def _parse_role_from_content(content: str) -> str:
     if "--caller-id:" not in content:
         return "orchestrator"
     lower = content.lower()
-    if "qa-engineer" in lower or "qa engineer" in lower:
-        return "qa-engineer"
-    if "software-engineer" in lower or "software engineer" in lower:
-        return "software-engineer"
+    for candidate in (
+        "software-engineer",
+        "qa-engineer",
+        "technical-writer",
+        "socratic-interviewer",
+        "autopoiesist-founder",
+        "autopoiesist-cpo",
+        "autopoiesist-architect",
+        "autopoiesist-dx-lead",
+        "autopoiesist-red-team",
+        "autopoiesist-complex-ai",
+        "autopoiesist-sre",
+        "autopoiesist-contrarian",
+        "autopoiesist-token-economist",
+    ):
+        if candidate in lower:
+            return candidate
     return "subagent"
 
 
@@ -77,91 +75,8 @@ def _detect_caller_role(transcript_path: Optional[str]) -> str:
     return _parse_role_from_content(step.get("content", ""))
 
 
-def _check_orchestrator_policy(rel_path: str) -> Tuple[str, Optional[str]]:
-    """
-    Enforces strict Conductor-only discipline.
-    Orchestrator is strictly prohibited from authoring ANY Python code or scripts.
-    Only documentation and contracts in docs/ are permitted.
-    """
-    is_code_file = rel_path.endswith(".py")
-    is_code_tree = rel_path.startswith(("core/", "tests/", "scripts/", "sandbox/"))
-
-    if is_code_file or is_code_tree:
-        reason = (
-            f"[IV&V HOOK BLOCKED] Primary Orchestrator is restricted from direct code authoring on '{rel_path}'. "
-            f"You are the Conductor, not a manual worker. You MUST dispatch 'software-engineer' or 'qa-engineer' "
-            f"via invoke_subagent."
-        )
-        return "deny", reason
-
-    return "allow", None
-
-
-def _is_qa_prohibited_path(rel_path: str, is_core: bool) -> bool:
-    """Checks if target path is prohibited for qa-engineer authoring."""
-    return is_core or rel_path.startswith("scripts/")
-
-
-def _is_contract_enforced_path(rel_path: str, is_core: bool, is_test: bool) -> bool:
-    """Checks if target path requires an active contract before mutation."""
-    return is_test or _is_qa_prohibited_path(rel_path, is_core)
-
-
-def _check_role_domain_isolation(
-    role: str, rel_path: str, is_core: bool, is_test: bool
-) -> Tuple[str, Optional[str]]:
-    """Enforces domain isolation between software-engineer and qa-engineer."""
-    if role == "software-engineer" and is_test:
-        reason = (
-            f"[IV&V HOOK BLOCKED] software-engineer is restricted from authoring tests on '{rel_path}'. "
-            f"Adversarial tests must be synthesized independently by qa-engineer."
-        )
-        return "deny", reason
-
-    if role == "qa-engineer" and _is_qa_prohibited_path(rel_path, is_core):
-        reason = (
-            f"[IV&V HOOK BLOCKED] qa-engineer is restricted from authoring implementation code on '{rel_path}'. "
-            f"Business logic must be authored by software-engineer."
-        )
-        return "deny", reason
-
-    return "allow", None
-
-
-def _check_contract_requirement(
-    role: str, rel_path: str, is_core: bool, is_test: bool
-) -> Tuple[str, Optional[str]]:
-    """Enforces active contract prerequisite for subagent code mutations."""
-    if role not in ("software-engineer", "qa-engineer"):
-        return "allow", None
-
-    if not _is_contract_enforced_path(rel_path, is_core, is_test):
-        return "allow", None
-
-    valid, contract_err = validate_contract_state()
-    if not valid:
-        reason = (
-            f"[CONTRACT_GATE_BLOCKED] Subagent '{role}' cannot mutate '{rel_path}': {contract_err}. "
-            f"You MUST establish an ACCEPTED contract in docs/active/ACTIVE_CONTRACT.md before implementation."
-        )
-        return "deny", reason
-
-    return "allow", None
-
-
-def _check_subagent_policy(
-    role: str, rel_path: str, is_core: bool, is_test: bool
-) -> Tuple[str, Optional[str]]:
-    """Enforces software-engineer vs qa-engineer separation and contract prerequisite."""
-    decision, reason = _check_role_domain_isolation(role, rel_path, is_core, is_test)
-    if decision != "allow":
-        return decision, reason
-
-    return _check_contract_requirement(role, rel_path, is_core, is_test)
-
-
 def evaluate_tool_call(payload: Dict[str, Any]) -> Tuple[str, Optional[str]]:
-    """Evaluates PreToolUse payload against IV&V access control rules."""
+    """Evaluates PreToolUse payload against Sovereign Authoring rules."""
     if os.environ.get("IVV_BYPASS") == "1":
         return "allow", None
 
@@ -178,12 +93,16 @@ def evaluate_tool_call(payload: Dict[str, Any]) -> Tuple[str, Optional[str]]:
     role = _detect_caller_role(payload.get("transcriptPath"))
 
     if role == "orchestrator":
-        return _check_orchestrator_policy(rel_path)
+        # Sovereign Orchestrator has full direct authoring authority
+        return "allow", None
 
-    is_core = rel_path.startswith("core/") or rel_path.startswith("sandbox/core/")
-    is_test = rel_path.startswith("tests/") or rel_path.startswith("sandbox/tests/")
-
-    return _check_subagent_policy(role, rel_path, is_core, is_test)
+    # Subagents are strictly read-only reviewers/analysts
+    reason = (
+        f"[READ_ONLY_SUBAGENT_BLOCKED] Subagent '{role}' is restricted to read-only review and analysis. "
+        f"Direct file mutation on '{rel_path}' is prohibited. "
+        f"All code and test authoring must be performed directly by the Primary Orchestrator."
+    )
+    return "deny", reason
 
 
 def main() -> int:

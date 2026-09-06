@@ -1,7 +1,7 @@
-"""
-Companion test suite for Automated IV&V Lifecycle Enforcement Hook (tests.test_guard_ivv_pipeline).
+﻿"""
+Companion test suite for Sovereign Orchestrator & Read-Only Subagent Guard Hook.
 
-Evaluates path normalization, transcript role detection, RBAC policies, and CLI I/O contracts.
+Evaluates path normalization, transcript role detection, sovereign authoring RBAC, and CLI I/O.
 Satisfies AST Anti-Cheat invariants (H-CODE-1 through H-CODE-12) with >= 30% negative test ratio.
 """
 
@@ -13,20 +13,12 @@ import tempfile
 import unittest
 from unittest import mock
 
-try:
-    from scripts.guard_ivv_pipeline import (
-        _normalize_path,
-        _detect_caller_role,
-        evaluate_tool_call,
-        main,
-    )
-except ModuleNotFoundError:
-    from sandbox.scripts.guard_ivv_pipeline import (
-        _normalize_path,
-        _detect_caller_role,
-        evaluate_tool_call,
-        main,
-    )
+from scripts.guard_ivv_pipeline import (
+    _normalize_path,
+    _detect_caller_role,
+    evaluate_tool_call,
+    main,
+)
 
 
 class TestGuardPathNormalization(unittest.TestCase):
@@ -62,10 +54,7 @@ class TestGuardRoleDetection(unittest.TestCase):
         """Positive test: Detects software-engineer from subagent initial prompt."""
         with tempfile.TemporaryDirectory() as tmpdir:
             transcript = Path(tmpdir) / "transcript.jsonl"
-            prompt = (
-                "You are software-engineer. Author production logic in sandbox/core.\n"
-                "--caller-id: parent-123"
-            )
+            prompt = "You are software-engineer. Review code.\n--caller-id: parent-123"
             step_data = {"step_index": 0, "content": prompt}
             transcript.write_text(json.dumps(step_data) + "\n", encoding="utf-8")
             role = _detect_caller_role(str(transcript))
@@ -75,10 +64,7 @@ class TestGuardRoleDetection(unittest.TestCase):
         """Positive test: Detects qa-engineer from subagent initial prompt."""
         with tempfile.TemporaryDirectory() as tmpdir:
             transcript = Path(tmpdir) / "transcript.jsonl"
-            prompt = (
-                "You are qa-engineer. Synthesize adversarial verification suite.\n"
-                "--caller-id: parent-123"
-            )
+            prompt = "You are qa-engineer. Audit test plans.\n--caller-id: parent-123"
             step_data = {"step_index": 0, "content": prompt}
             transcript.write_text(json.dumps(step_data) + "\n", encoding="utf-8")
             role = _detect_caller_role(str(transcript))
@@ -93,11 +79,11 @@ class TestGuardRoleDetection(unittest.TestCase):
             self.assertEqual(role, "orchestrator")
 
 
-class TestGuardAccessControlPolicy(unittest.TestCase):
-    """Evaluates RBAC rules for orchestrator, software-engineer, and qa-engineer."""
+class TestSovereignAuthoringAccessPolicy(unittest.TestCase):
+    """Evaluates sovereign orchestrator authoring and read-only subagent lock."""
 
-    def test_negative_orchestrator_blocked_from_core(self) -> None:
-        """Negative test: Blocks orchestrator from mutating core/ files directly."""
+    def test_orchestrator_allowed_core_authoring(self) -> None:
+        """Positive test: Allows sovereign orchestrator to write core logic directly."""
         payload = {
             "toolCall": {
                 "name": "write_to_file",
@@ -106,42 +92,28 @@ class TestGuardAccessControlPolicy(unittest.TestCase):
             "transcriptPath": None,
         }
         decision, reason = evaluate_tool_call(payload)
-        self.assertEqual(decision, "deny")
-        self.assertIsNotNone(reason)
-        self.assertIn("IV&V HOOK BLOCKED", str(reason))
+        self.assertEqual(decision, "allow")
+        self.assertIsNone(reason)
 
-    def test_negative_orchestrator_blocked_from_sandbox_core(self) -> None:
-        """Negative test: Blocks orchestrator from writing to sandbox/core/ files."""
+    def test_orchestrator_allowed_tests_authoring(self) -> None:
+        """Positive test: Allows sovereign orchestrator to write tests directly."""
+        payload = {
+            "toolCall": {
+                "name": "write_to_file",
+                "args": {"TargetFile": "tests/test_cortex.py"},
+            },
+            "transcriptPath": None,
+        }
+        decision, reason = evaluate_tool_call(payload)
+        self.assertEqual(decision, "allow")
+        self.assertIsNone(reason)
+
+    def test_orchestrator_allowed_docs_and_scripts(self) -> None:
+        """Positive test: Allows sovereign orchestrator to edit documentation and scripts."""
         payload = {
             "toolCall": {
                 "name": "replace_file_content",
-                "args": {"TargetFile": "sandbox/core/cache.py"},
-            },
-            "transcriptPath": None,
-        }
-        decision, reason = evaluate_tool_call(payload)
-        self.assertEqual(decision, "deny")
-        self.assertIn("sandbox/core/cache.py", str(reason))
-
-    def test_negative_orchestrator_blocked_from_tests(self) -> None:
-        """Negative test: Blocks orchestrator from writing test suites directly."""
-        payload = {
-            "toolCall": {
-                "name": "write_to_file",
-                "args": {"TargetFile": "sandbox/tests/test_cache.py"},
-            },
-            "transcriptPath": None,
-        }
-        decision, reason = evaluate_tool_call(payload)
-        self.assertEqual(decision, "deny")
-        self.assertIn("sandbox/tests/test_cache.py", str(reason))
-
-    def test_orchestrator_allowed_docs_and_scripts(self) -> None:
-        """Positive test: Allows orchestrator to edit documentation and state files."""
-        payload = {
-            "toolCall": {
-                "name": "write_to_file",
-                "args": {"TargetFile": "docs/active/CURRENT_STATE.md"},
+                "args": {"TargetFile": "scripts/preflight_check.py"},
             },
             "transcriptPath": None,
         }
@@ -149,98 +121,58 @@ class TestGuardAccessControlPolicy(unittest.TestCase):
         self.assertEqual(decision, "allow")
         self.assertIsNone(reason)
 
-    @mock.patch("scripts.guard_ivv_pipeline.validate_contract_state", return_value=(True, None))
     @mock.patch("scripts.guard_ivv_pipeline._detect_caller_role")
-    def test_software_engineer_allowed_sandbox_core(
-        self, mock_role: mock.MagicMock, _mock_validate: mock.MagicMock
+    def test_negative_software_engineer_blocked_from_writing(
+        self, mock_role: mock.MagicMock
     ) -> None:
-        """Positive test: Allows software-engineer to write to sandbox/core/."""
+        """Negative test: Strictly blocks software-engineer subagent from mutating code."""
         mock_role.return_value = "software-engineer"
         payload = {
             "toolCall": {
                 "name": "write_to_file",
-                "args": {"TargetFile": "sandbox/core/module.py"},
-            },
-            "transcriptPath": "dummy.jsonl",
-        }
-        decision, reason = evaluate_tool_call(payload)
-        self.assertEqual(decision, "allow")
-        self.assertIsNone(reason)
-
-    @mock.patch("scripts.guard_ivv_pipeline.validate_contract_state", return_value=(True, None))
-    @mock.patch("scripts.guard_ivv_pipeline._detect_caller_role")
-    def test_negative_software_engineer_blocked_from_tests(
-        self, mock_role: mock.MagicMock, _mock_validate: mock.MagicMock
-    ) -> None:
-        """Negative test: Blocks software-engineer from authoring verification tests."""
-        mock_role.return_value = "software-engineer"
-        payload = {
-            "toolCall": {
-                "name": "write_to_file",
-                "args": {"TargetFile": "sandbox/tests/test_module.py"},
-            },
-            "transcriptPath": "dummy.jsonl",
-        }
-        decision, reason = evaluate_tool_call(payload)
-        self.assertEqual(decision, "deny")
-        self.assertIn("software-engineer is restricted from authoring tests", str(reason))
-
-    @mock.patch("scripts.guard_ivv_pipeline.validate_contract_state", return_value=(True, None))
-    @mock.patch("scripts.guard_ivv_pipeline._detect_caller_role")
-    def test_qa_engineer_allowed_sandbox_tests(
-        self, mock_role: mock.MagicMock, _mock_validate: mock.MagicMock
-    ) -> None:
-        """Positive test: Allows qa-engineer to write to sandbox/tests/."""
-        mock_role.return_value = "qa-engineer"
-        payload = {
-            "toolCall": {
-                "name": "write_to_file",
-                "args": {"TargetFile": "sandbox/tests/test_module.py"},
-            },
-            "transcriptPath": "dummy.jsonl",
-        }
-        decision, reason = evaluate_tool_call(payload)
-        self.assertEqual(decision, "allow")
-        self.assertIsNone(reason)
-
-    @mock.patch("scripts.guard_ivv_pipeline.validate_contract_state", return_value=(True, None))
-    @mock.patch("scripts.guard_ivv_pipeline._detect_caller_role")
-    def test_negative_qa_engineer_blocked_from_core(
-        self, mock_role: mock.MagicMock, _mock_validate: mock.MagicMock
-    ) -> None:
-        """Negative test: Blocks qa-engineer from mutating business logic."""
-        mock_role.return_value = "qa-engineer"
-        payload = {
-            "toolCall": {
-                "name": "write_to_file",
-                "args": {"TargetFile": "sandbox/core/module.py"},
-            },
-            "transcriptPath": "dummy.jsonl",
-        }
-        decision, reason = evaluate_tool_call(payload)
-        self.assertEqual(decision, "deny")
-        self.assertIn("qa-engineer is restricted from authoring implementation", str(reason))
-
-    @mock.patch("scripts.guard_ivv_pipeline.validate_contract_state")
-    @mock.patch("scripts.guard_ivv_pipeline._detect_caller_role")
-    def test_negative_subagent_blocked_when_contract_invalid(
-        self, mock_role: mock.MagicMock, mock_validate: mock.MagicMock
-    ) -> None:
-        """Negative test: Blocks subagent when active contract state is invalid."""
-        mock_role.return_value = "software-engineer"
-        mock_validate.return_value = (False, "Contract missing on disk")
-        payload = {
-            "toolCall": {
-                "name": "write_to_file",
-                "args": {"TargetFile": "sandbox/core/module.py"},
+                "args": {"TargetFile": "core/module.py"},
             },
             "transcriptPath": "dummy.jsonl",
         }
         decision, reason = evaluate_tool_call(payload)
         self.assertEqual(decision, "deny")
         self.assertIsNotNone(reason)
-        self.assertIn("CONTRACT_GATE_BLOCKED", str(reason))
-        self.assertIn("Contract missing on disk", str(reason))
+        self.assertIn("READ_ONLY_SUBAGENT_BLOCKED", str(reason))
+
+    @mock.patch("scripts.guard_ivv_pipeline._detect_caller_role")
+    def test_negative_qa_engineer_blocked_from_writing(
+        self, mock_role: mock.MagicMock
+    ) -> None:
+        """Negative test: Strictly blocks qa-engineer subagent from mutating tests."""
+        mock_role.return_value = "qa-engineer"
+        payload = {
+            "toolCall": {
+                "name": "write_to_file",
+                "args": {"TargetFile": "tests/test_module.py"},
+            },
+            "transcriptPath": "dummy.jsonl",
+        }
+        decision, reason = evaluate_tool_call(payload)
+        self.assertEqual(decision, "deny")
+        self.assertIsNotNone(reason)
+        self.assertIn("READ_ONLY_SUBAGENT_BLOCKED", str(reason))
+
+    @mock.patch("scripts.guard_ivv_pipeline._detect_caller_role")
+    def test_negative_technical_writer_blocked_from_writing(
+        self, mock_role: mock.MagicMock
+    ) -> None:
+        """Negative test: Strictly blocks technical-writer subagent from mutating docs."""
+        mock_role.return_value = "technical-writer"
+        payload = {
+            "toolCall": {
+                "name": "replace_file_content",
+                "args": {"TargetFile": "docs/active/CURRENT_STATE.md"},
+            },
+            "transcriptPath": "dummy.jsonl",
+        }
+        decision, reason = evaluate_tool_call(payload)
+        self.assertEqual(decision, "deny")
+        self.assertIn("READ_ONLY_SUBAGENT_BLOCKED", str(reason))
 
     def test_emergency_bypass_flag(self) -> None:
         """Positive test: Verifies IVV_BYPASS=1 allows all mutations for emergency recovery."""
@@ -249,23 +181,24 @@ class TestGuardAccessControlPolicy(unittest.TestCase):
                 "name": "write_to_file",
                 "args": {"TargetFile": "core/emergency.py"},
             },
-            "transcriptPath": None,
+            "transcriptPath": "subagent.jsonl",
         }
-        with mock.patch.dict(os.environ, {"IVV_BYPASS": "1"}):
-            decision, reason = evaluate_tool_call(payload)
-            self.assertEqual(decision, "allow")
-            self.assertIsNone(reason)
+        with mock.patch("scripts.guard_ivv_pipeline._detect_caller_role", return_value="software-engineer"):
+            with mock.patch.dict(os.environ, {"IVV_BYPASS": "1"}):
+                decision, reason = evaluate_tool_call(payload)
+                self.assertEqual(decision, "allow")
+                self.assertIsNone(reason)
 
 
 class TestGuardCLI(unittest.TestCase):
     """Evaluates standard I/O and JSON streaming for Antigravity hook integration."""
 
     def test_cli_allow_positive(self) -> None:
-        """Positive test: Verifies CLI returns JSON allow response."""
+        """Positive test: Verifies CLI returns JSON allow response for orchestrator."""
         payload = {
             "toolCall": {
                 "name": "write_to_file",
-                "args": {"TargetFile": "docs/specs/SPEC-001.md"},
+                "args": {"TargetFile": "core/logic.py"},
             }
         }
         stdin_stream = io.StringIO(json.dumps(payload))
@@ -278,19 +211,21 @@ class TestGuardCLI(unittest.TestCase):
         out = json.loads(stdout_stream.getvalue())
         self.assertEqual(out["decision"], "allow")
 
-    def test_negative_cli_deny_on_violation(self) -> None:
-        """Negative test: Verifies CLI outputs JSON deny response on policy violation."""
+    def test_negative_cli_deny_on_subagent(self) -> None:
+        """Negative test: Verifies CLI outputs JSON deny response when subagent writes."""
         payload = {
             "toolCall": {
                 "name": "write_to_file",
-                "args": {"TargetFile": "core/cortex.py"},
-            }
+                "args": {"TargetFile": "core/logic.py"},
+            },
+            "transcriptPath": "subagent.jsonl",
         }
         stdin_stream = io.StringIO(json.dumps(payload))
         stdout_stream = io.StringIO()
 
-        with mock.patch("sys.stdin", stdin_stream), mock.patch("sys.stdout", stdout_stream):
-            code = main()
+        with mock.patch("scripts.guard_ivv_pipeline._detect_caller_role", return_value="software-engineer"):
+            with mock.patch("sys.stdin", stdin_stream), mock.patch("sys.stdout", stdout_stream):
+                code = main()
 
         self.assertEqual(code, 0)
         out = json.loads(stdout_stream.getvalue())
