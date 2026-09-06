@@ -1,7 +1,14 @@
 ---
 name: "coding_convention"
 description: "Enforces enterprise naming conventions, layout formatting, comment standards, and Conventional Commits. Use this rule whenever writing, formatting, or reviewing code and commit messages."
-activation: Menual
+globs:
+  - "**/*.py"
+  - "**/*.ts"
+  - "**/*.js"
+  - "**/*.java"
+  - "**/*.go"
+  - "**/*.cpp"
+  - "**/*.cs"
 ---
 
 # Universal Enterprise Coding Conventions (Style & Hygiene)

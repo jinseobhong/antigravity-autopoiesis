@@ -1,7 +1,14 @@
 ---
 name: "coding_standard"
 description: "Enforces ISO/IEC 5055 structural quality, secure coding, and clean architecture standards. Use this rule whenever writing, modifying, refactoring, or reviewing source code."
-activation: Manual
+globs:
+  - "**/*.py"
+  - "**/*.ts"
+  - "**/*.js"
+  - "**/*.java"
+  - "**/*.go"
+  - "**/*.cpp"
+  - "**/*.cs"
 ---
 
 # Enterprise Source Code Quality Specification (ISO/IEC 5055 / OMG ASCQM)
@@ -96,7 +103,6 @@ This specification defines mandatory structural, security, and reliability const
   - Unstructured jumps (e.g., `goto` outside switch blocks) are **FORBIDDEN** (`CWE-1075`).
   - NEVER mutate loop counter variables inside the loop body (`CWE-1095`).
   - Variable assignments inside conditional checks (e.g., `if (a = b)`) are **STRICTLY FORBIDDEN**.
-```
 
 ---
 
