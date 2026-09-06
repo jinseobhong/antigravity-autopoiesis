@@ -1,142 +1,97 @@
 ---
-id: "CONTRACT-20260907-evolutionary-engine"
-title: "AI-Native Evolutionary Recombination Engine Contract"
+id: "CONTRACT-20260907-configuration-baseline-hook"
+title: "Configuration Baseline & Run Completion Enforcement Hook Contract"
 status: "ACCEPTED"
 owner: "Platform Architecture Team"
 last_reviewed: "2026-09-07"
-target_task_id: "TASK-030"
+target_task_id: "TASK-031"
 ---
 
-# Active Engineering Contract: AI-Native Evolutionary Recombination Engine (TASK-030)
+# Active Engineering Contract: Configuration Baseline & Run Completion Enforcement Hook (TASK-031)
 
 > [!NOTE]
 > ### Document Scope & Governance Authority
-> This binding contract defines the operational invariants, typed interface schemas, and verification matrix for TASK-030: AI-Native Evolutionary Recombination Engine.
+> This binding contract defines the operational invariants, typed interface schemas, and verification matrix for TASK-031: Configuration Baseline & Run Completion Enforcement Hook.
 > - **Operational Standard**: Antigravity Engineering Constitution (`GEMINI.md` Section 3.5).
-> - **Target Task ID**: `TASK-030`
-> - **Validation Gate**: `python scripts/validate_active_contract.py --task TASK-030`
+> - **Target Task ID**: `TASK-031`
+> - **Validation Gate**: `python scripts/validate_active_contract.py --task TASK-031`
 
 ---
 
 ## 1. Executive Summary & Problem Formulation
 
-The AI-Native Evolutionary Recombination Engine (`core/evolutionary_engine.py`) provides an automated, grammar-aware genetic algorithm subsystem for synthesizing and optimizing Python code modules. By operating directly on Python Abstract Syntax Trees (AST), the engine applies genetic operators (tournament selection, homologous crossover, point mutation) to evolve candidate implementations that conform to mechanical interface specifications.
+The Configuration Baseline & Run Completion Enforcement Hook (`scripts/guard_configuration_baseline.py`) provides a deterministic lifecycle verification interceptor executed during the agent `Stop` lifecycle event. In autonomous multi-agent environments, agents may conclude a turn or finish an execution run while leaving modified files uncommitted or newly created artifacts untracked. In the absence of an active task, such uncommitted states represent configuration drift and unanchored mutations. Conversely, when a task is actively in progress, intermediate working tree modifications represent valid in-flight work.
+
+To resolve this dichotomy deterministically, the configuration baseline guard intercepts turn termination requests:
+1. When all tasks in `docs/active/CURRENT_STATE.md` have concluded (no tasks are `IN_PROGRESS`) and uncommitted git modifications exist, the hook intercepts termination and returns a `continue` decision instructing the agent to establish a configuration baseline and commit modifications.
+2. When any task in `docs/active/CURRENT_STATE.md` remains `IN_PROGRESS`, the hook permits turn completion by returning an empty object (`{}`).
+3. When the git working tree is clean (`git status --porcelain` is empty), the hook permits turn completion by returning an empty object (`{}`).
 
 ```mermaid
 flowchart TD
-    Seed["Seed Implementations"] --> PopInit["Population Initializer"]
-    PopInit --> Pool["Candidate Population Pool"]
-    Pool --> LethalCheck{"Pre-Execution Lethality Filter (AST Docking + Compilation <= 5.0ms)"}
-    LethalCheck -->|"Lethal (Syntax/Type Defect)"| Drop["Discard Candidate"]
-    LethalCheck -->|"Viable Genome"| DynEval["Out-of-Process Fitness Evaluator (Subprocess Watchdog <= 3.0s)"]
-    DynEval --> Score["Assign Fitness Score"]
-    Score --> TermCheck{"Termination Criteria Met? (Generations / Fitness Target)"}
-    TermCheck -->|"Converged"| Best["Return EvolutionOutcome"]
-    TermCheck -->|"Iterate"| Selection["Tournament Selection"]
-    Selection --> Crossover["Homologous AST Crossover"]
-    Crossover --> Mutation["Body-Confined AST Mutation"]
-    Mutation --> Pool
+    StopEvent["Stop Lifecycle Trigger"] --> ReadStdin["Read JSON Payload from Stdin"]
+    ReadStdin --> CheckLedger{"Check CURRENT_STATE.md:\nAny Task IN_PROGRESS?"}
+    CheckLedger -->|"Yes (Task Active)"| AllowStopActive["Return Empty Object {}\n(Turn Completion Permitted)"]
+    CheckLedger -->|"No Active Tasks"| ExecGit{"Execute git status --porcelain:\nWorking Tree Clean?"}
+    ExecGit -->|"Clean (No Diff)"| AllowStopClean["Return Empty Object {}\n(Turn Completion Permitted)"]
+    ExecGit -->|"Dirty (Uncommitted Diffs)"| ReturnContinue["Return decision continue\n(Mandatory Commit Directive)"]
 ```
 
 ---
 
 ## 2. Interface and Data Model Specifications
 
-All interface protocols and frozen telemetry records are declared within `core/interfaces/evolutionary_engine_proto.py`.
+The configuration baseline hook executes as a standalone Python CLI script adhering to the `.agents/hooks.json` schema specification.
 
-### 2.1 Frozen Telemetry and Configuration Schemas
+### 2.1 Hook Execution Signature and Data Models
 
 ```python
-"""Mechanical interface protocols and data models for evolutionary recombination engine."""
+"""Data models and execution schema for configuration baseline guard."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Optional, Protocol, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 
 @dataclass(frozen=True)
-class EvolutionConfig:
-    """Immutable configuration parameters for genetic algorithm evolution loop."""
+class ConfigurationBaselineReport:
+    """Immutable report of configuration baseline and task lifecycle status."""
 
-    population_size: int = 20
-    generations: int = 10
-    mutation_rate: float = 0.1
-    crossover_rate: float = 0.8
-    tournament_size: int = 3
-    lethality_ceiling_ms: float = 5.0
-    watchdog_timeout_sec: float = 3.0
-    seed: Optional[int] = None
+    active_tasks: Tuple[str, ...]
+    uncommitted_files: Tuple[str, ...]
+    is_git_clean: bool
+    decision: str
+    explanation: Optional[str] = None
 
-
-@dataclass(frozen=True)
-class MutantCandidate:
-    """Immutable record of an individual program candidate in the population."""
-
-    candidate_id: str
-    source_code: str
-    generation: int
-    parent_ids: Tuple[str, ...] = ()
-    fitness_score: float = 0.0
-    is_lethal: bool = False
-    mutation_type: str = "seed"
+    def to_hook_response(self) -> Dict[str, Any]:
+        """Serializes result into canonical Stop hook JSON response dictionary."""
+        if self.decision == "continue":
+            return {
+                "decision": "continue",
+                "explanation": self.explanation or "Working tree contains uncommitted modifications.",
+            }
+        return {}
 
 
 @dataclass(frozen=True)
-class GenerationReport:
-    """Immutable telemetry report summarizing population fitness metrics per generation."""
+class HookInvocationContext:
+    """Immutable context received from Stop hook payload."""
 
-    generation_number: int
-    best_fitness: float
-    average_fitness: float
-    lethal_count: int
-    survivor_count: int
-    elapsed_sec: float
-
-
-@dataclass(frozen=True)
-class EvolutionOutcome:
-    """Immutable terminal result of complete evolutionary optimization run."""
-
-    success: bool
-    best_candidate: MutantCandidate
-    generation_reports: Tuple[GenerationReport, ...] = ()
-    total_generations: int = 0
-    total_candidates_evaluated: int = 0
-    termination_reason: str = "max_generations"
+    cwd: str
+    transcript_path: Optional[str] = None
+    stop_reason: Optional[str] = None
 ```
 
-### 2.2 Mechanical Interface Protocols
+### 2.2 CLI Invocation Protocol
 
-```python
-class FitnessEvaluatorProtocol(Protocol):
-    """Protocol defining candidate code evaluation."""
-
-    def evaluate(self, candidate_code: str) -> float:
-        """Evaluate candidate code string and return numerical fitness score."""
-        raise NotImplementedError("Protocol method must be implemented by concrete evaluator.")
-
-
-class EvolutionaryEngineProtocol(Protocol):
-    """Protocol defining genetic recombination and mutation operations."""
-
-    def crossover(self, parent_a_code: str, parent_b_code: str) -> Tuple[str, str]:
-        """Perform homologous AST crossover between two parent code representations."""
-        raise NotImplementedError("Protocol method must be implemented by concrete engine.")
-
-    def mutate(self, candidate_code: str) -> str:
-        """Perform body-confined AST mutation on target candidate source code."""
-        raise NotImplementedError("Protocol method must be implemented by concrete engine.")
-
-    def evolve(
-        self,
-        seed_code: str,
-        evaluator: FitnessEvaluatorProtocol,
-        config: EvolutionConfig,
-    ) -> EvolutionOutcome:
-        """Execute complete genetic evolution loop starting from seed implementation."""
-        raise NotImplementedError("Protocol method must be implemented by concrete engine.")
-```
+The guard script conforms to the standardized Antigravity CLI lifecycle hook interface:
+- **Invocation Command**: `python scripts/guard_configuration_baseline.py`
+- **Standard Input**: JSON payload with optional `stopHookActive`, `transcriptPath`, and environment parameters. If stdin is empty or unparseable, the script fails open gracefully and returns `{}`.
+- **Standard Output**: Formatted JSON written to stdout:
+  - Permitted termination: `{}`
+  - Intercepted termination: `{"decision": "continue", "explanation": "..."}`
+- **Exit Code**: Always `0` to prevent unhandled hook crashes in the agent harness.
 
 ---
 
@@ -144,15 +99,13 @@ class EvolutionaryEngineProtocol(Protocol):
 
 System invariants conform strictly to the NASA SP-2016-6105 single-thought mandate (zero compound conjunctions in binding normative requirements).
 
-- `[INV-EVO-01]` The module core/interfaces/evolutionary_engine_proto.py SHALL define frozen data models (EvolutionConfig, MutantCandidate, GenerationReport, EvolutionOutcome) alongside protocols (FitnessEvaluatorProtocol, EvolutionaryEngineProtocol).
-- `[INV-EVO-02]` Static AST docking between core/interfaces/evolutionary_engine_proto.py and core/evolutionary_engine.py SHALL evaluate to is_docked=True with 0 defects via core.ast_docking_checker.
-- `[INV-EVO-03]` AST crossover and mutation operations SHALL enforce homologous grammar splicing restricting statement swaps to statements, expression swaps to expressions.
-- `[INV-EVO-04]` Crossover and mutation operations SHALL treat Protocol class signatures plus method signatures as immutable genomes.
-- `[INV-EVO-05]` Mutation operations SHALL restrict modifications strictly to method internal bodies.
-- `[INV-EVO-06]` Every candidate individual SHALL pass compilation followed by verify_ast_docking within a 5.0 millisecond lethality ceiling prior to dynamic execution.
-- `[INV-EVO-07]` Dynamic fitness evaluation of candidate code SHALL execute strictly out-of-process under a 3.0 second watchdog ceiling.
-- `[INV-EVO-08]` CLI command python -m core.evolutionary_engine [--generations N] [--pop N] [--json] SHALL return exit code 0 upon successful execution.
-- `[INV-EVO-09]` All functions in core/evolutionary_engine.py SHALL maintain cyclomatic complexity <= 10 with line lengths <= 120 columns.
+- `[INV-SCM-01]` scripts/guard_configuration_baseline.py SHALL inspect git working tree status plus CURRENT_STATE.md task status upon Stop lifecycle invocation.
+- `[INV-SCM-02]` When no tasks are IN_PROGRESS and git status contains uncommitted modifications, scripts/guard_configuration_baseline.py SHALL return decision continue with a mandatory commit directive.
+- `[INV-SCM-03]` When any task is IN_PROGRESS, scripts/guard_configuration_baseline.py SHALL return an empty object permitting turn completion.
+- `[INV-SCM-04]` When git status is clean, scripts/guard_configuration_baseline.py SHALL return an empty object permitting turn completion.
+- `[INV-SCM-05]` All functions in scripts/guard_configuration_baseline.py SHALL maintain cyclomatic complexity <= 10 with line lengths <= 120 columns.
+- `[INV-SCM-06]` .agents/hooks.json SHALL register configuration-baseline-guard under the Stop lifecycle event.
+- `[INV-SCM-07]` Companion test tests/test_guard_configuration_baseline.py SHALL verify positive plus negative containment paths with a negative assertion ratio >= 30%.
 
 ---
 
@@ -160,47 +113,56 @@ System invariants conform strictly to the NASA SP-2016-6105 single-thought manda
 
 | Requirement ID | Target Metric | Degraded Threshold | Verification Method | Verification Tool / Command |
 | :--- | :--- | :--- | :--- | :--- |
-| `[INV-EVO-01]` | 4 Dataclasses, 2 Protocols defined | Missing types or mutable fields | Static AST Inspection | `python -m unittest tests/test_evolutionary_engine.py` |
-| `[INV-EVO-02]` | `is_docked=True`, 0 defects | Any interface mismatch | Automated AST Docking Gate | `python -m core.ast_docking_checker --proto core/interfaces/evolutionary_engine_proto.py --impl core/evolutionary_engine.py` |
-| `[INV-EVO-03]` | 100% Homologous AST Splices | Heterogeneous AST node swap | AST Invariant Unit Test | `pytest tests/test_evolutionary_engine.py -k test_homologous_splicing` |
-| `[INV-EVO-04]` | Protocol signatures unchanged | Protocol genome mutated | AST Integrity Test | `pytest tests/test_evolutionary_engine.py -k test_signature_immutability` |
-| `[INV-EVO-05]` | Method signature mutation == 0 | Outer signature modified | AST Scope Boundary Test | `pytest tests/test_evolutionary_engine.py -k test_mutation_body_only` |
-| `[INV-EVO-06]` | Lethality filter latency <= 5.0ms | Processing duration > 5.0ms | Fast-Path Benchmark Test | `pytest tests/test_evolutionary_engine.py -k test_lethality_latency` |
-| `[INV-EVO-07]` | Watchdog execution timeout == 3.0s | Process hang or leak | Subprocess Isolation Test | `pytest tests/test_evolutionary_engine.py -k test_watchdog_timeout` |
-| `[INV-EVO-08]` | Exit code == 0 with JSON telemetry | Exit code != 0 | CLI Invocation Test | `python -m core.evolutionary_engine --generations 2 --pop 4 --json` |
-| `[INV-EVO-09]` | CC <= 10, line lengths <= 120 | CC > 10 or length > 120 | Quantitative Compliance Gate | `python scripts/compliance_checker.py core/evolutionary_engine.py` |
+| `[INV-SCM-01]` | Status inspection latency $\le 100\text{ms}$ | $> 250\text{ms}$ | Unit Test & Subprocess Mock | `pytest tests/test_guard_configuration_baseline.py -k test_status_inspection` |
+| `[INV-SCM-02]` | Return `continue` when dirty and idle | Permitted exit on dirty idle tree | Negative Security Integration Test | `pytest tests/test_guard_configuration_baseline.py -k test_dirty_no_active_task` |
+| `[INV-SCM-03]` | Return `{}` when task is active | Blocked exit during active task | Positive Path Integration Test | `pytest tests/test_guard_configuration_baseline.py -k test_active_task_permits_stop` |
+| `[INV-SCM-04]` | Return `{}` when tree is clean | Blocked exit on clean repository | Positive Path Integration Test | `pytest tests/test_guard_configuration_baseline.py -k test_clean_status_permits_stop` |
+| `[INV-SCM-05]` | CC $\le 10$, Line Length $\le 120$ | CC $> 10$ or length $> 120$ | Quantitative Compliance Gate | `python scripts/compliance_checker.py scripts/guard_configuration_baseline.py` |
+| `[INV-SCM-06]` | Hook registered under `Stop` | Missing hook configuration | JSON Schema Verification | `pytest tests/test_guard_configuration_baseline.py -k test_hooks_registration` |
+| `[INV-SCM-07]` | Negative assertion ratio $\ge 30\%$ | Negative ratio $< 30\%$ | AST Ratio Audit | `pytest tests/test_guard_configuration_baseline.py -k test_negative_assertion_ratio` |
 
 ---
 
-## 5. Architectural Process & Sandbox Confinement Topology
+## 5. Architectural Process & Hook Confinement Topology
 
-The recombination engine operates inside the isolated `./sandbox/` filesystem hierarchy during development. Fitness evaluation runs strictly out-of-process to prevent untrusted candidate code from polluting the primary runtime environment.
+The configuration baseline hook executes within the orchestrator lifecycle boundary without direct write permissions to production code repositories.
 
 ```mermaid
 flowchart LR
-    subgraph HostRuntime ["Orchestrator Host Process"]
-        Engine["core.evolutionary_engine\n(Recombination Controller)"]
-        PreFilter["Lethality Gatekeeper\n(ast.parse + ast_docking_checker)"]
+    subgraph AgentRuntime ["Autonomous Agent Runtime"]
+        AgentCore["Agent Turn Loop"]
+        StopTrigger["Stop Request Trigger"]
     end
 
-    subgraph SandboxBoundary ["Subprocess Watchdog Confinement"]
-        Worker["Isolated Worker Daemon\n(core.warm_runner)"]
-        TestHarness["Dynamic Test Suite\n(pytest / unittest)"]
+    subgraph HookBoundary ["Lifecycle Interceptor Boundary"]
+        GuardScript["scripts/guard_configuration_baseline.py"]
+        GitSubprocess["git status --porcelain Subprocess"]
+        StateParser["docs/active/CURRENT_STATE.md Parser"]
     end
 
-    Engine -->|"1. Generate Candidate AST"| PreFilter
-    PreFilter -->|"2. Verify AST Invariants (< 5ms)"| Worker
-    Worker -->|"3. Execute Under Watchdog (< 3s)"| TestHarness
-    TestHarness -->|"4. Collect Exit Code & Duration"| Worker
-    Worker -->|"5. Return Structured Telemetry"| Engine
+    subgraph DecisionChannel ["Hook Decision Output"]
+        DecisionPass["Return {} (Stop Permitted)"]
+        DecisionContinue["Return continue (Commit Directive)"]
+    end
+
+    AgentCore -->|"Turn Finished"| StopTrigger
+    StopTrigger -->|"Invoke Stop Hook"| GuardScript
+    GuardScript -->|"Query Working Tree"| GitSubprocess
+    GuardScript -->|"Query Task Status"| StateParser
+    GitSubprocess -->|"Status Porcelain"| GuardScript
+    StateParser -->|"Task States"| GuardScript
+    GuardScript -->|"Clean or Task Active"| DecisionPass
+    GuardScript -->|"Dirty and No Active Task"| DecisionContinue
+    DecisionPass -->|"Acknowledge Stop"| AgentCore
+    DecisionContinue -->|"Mandatory Commit Turn"| AgentCore
 ```
 
 ---
 
 ## 6. Phased Implementation & Rollout Roadmap
 
-1. **Phase 1 (Protocol & Schema Definition)**: Author `core/interfaces/evolutionary_engine_proto.py` declaring frozen data models and protocols.
-2. **Phase 2 (AST Genetic Operators)**: Implement homologous statement/expression crossover and body-confined AST mutation in `core/evolutionary_engine.py`.
-3. **Phase 3 (Lethality & Watchdog Harness)**: Implement sub-5ms static AST docking pre-filtering and 3.0s out-of-process execution watchdog.
-4. **Phase 4 (CLI & Telemetry Surface)**: Add CLI runner supporting `--generations`, `--pop`, and `--json` flags with structured JSON exit.
-5. **Phase 5 (Verification & Companion Test Suite)**: Author companion tests in `tests/test_evolutionary_engine.py` enforcing >= 30% negative assertions and clean AST.
+1. **Phase 1 (Contract Acceptance)**: Author and ratify active engineering contract for `TASK-031` in `docs/active/ACTIVE_CONTRACT.md`.
+2. **Phase 2 (Hook Implementation)**: Implement `scripts/guard_configuration_baseline.py` reading `git status --porcelain` and parsing `docs/active/CURRENT_STATE.md` with cyclomatic complexity $\le 10$ and line lengths $\le 120$.
+3. **Phase 3 (Hook Registration)**: Register `configuration-baseline-guard` in `.agents/hooks.json` under the `Stop` lifecycle event.
+4. **Phase 4 (Companion Verification Suite)**: Author `tests/test_guard_configuration_baseline.py` covering positive, negative, and degraded execution paths with $\ge 30\%$ negative assertion ratio.
+5. **Phase 5 (Preflight & Promotion)**: Execute full automated compliance checking and test verification prior to sovereign operator promotion.

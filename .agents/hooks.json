@@ -12,5 +12,14 @@
         ]
       }
     ]
+  },
+  "configuration-baseline-guard": {
+    "Stop": [
+      {
+        "type": "command",
+        "command": "python ../scripts/guard_configuration_baseline.py",
+        "timeout": 10
+      }
+    ]
   }
 }
