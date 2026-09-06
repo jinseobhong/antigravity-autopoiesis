@@ -1,3 +1,11 @@
+---
+id: ARCHIVE-20260907-task-001-026
+title: Archived Task History TASK-001 through TASK-026
+status: RETIRED
+owner: Platform Lead
+last_reviewed: 2026-09-07
+---
+
 # Archived Task History: TASK-001 through TASK-026
 
 Archived from docs/active/CURRENT_STATE.md to enforce the Rolling Task Horizon and prevent context bloat.

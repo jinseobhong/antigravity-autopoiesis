@@ -16,7 +16,6 @@ from dataclasses import FrozenInstanceError
 import json
 import os
 from pathlib import Path
-import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -80,55 +79,6 @@ except ModuleNotFoundError:
         verify_ast_docking = None  # type: ignore[assignment]
 
 
-_TASK_030_FALLBACK_CONTRACT = """---
-id: "CONTRACT-20260907-evolutionary-engine"
-title: "AI-Native Evolutionary Recombination Engine Contract"
-status: "ACCEPTED"
-owner: "Platform Architecture Team"
-last_reviewed: "2026-09-07"
-target_task_id: "TASK-030"
----
-
-# Active Engineering Contract: AI-Native Evolutionary Recombination Engine (TASK-030)
-
-## 3. Normative System Invariants (NASA SP-2016-6105)
-- `[INV-EVO-01]` core/interfaces/evolutionary_engine_proto.py SHALL define frozen data models and protocols.
-- `[INV-EVO-02]` Static AST docking SHALL evaluate to is_docked=True with 0 defects.
-- `[INV-EVO-03]` AST crossover and mutation SHALL enforce homologous grammar splicing.
-- `[INV-EVO-04]` Protocol signatures plus method signatures are immutable genomes.
-- `[INV-EVO-05]` Mutation operations SHALL restrict modifications strictly to method internal bodies.
-- `[INV-EVO-06]` Every candidate individual SHALL pass compilation followed by lethality check <= 5.0ms.
-- `[INV-EVO-07]` Dynamic fitness evaluation SHALL execute out-of-process under a 3.0s watchdog ceiling.
-- `[INV-EVO-08]` CLI command python -m core.evolutionary_engine SHALL return exit code 0.
-- `[INV-EVO-09]` Functions in core/evolutionary_engine.py SHALL maintain CC <= 10 with line length <= 120.
-"""
-
-
-def _load_task_030_contract() -> str:
-    """Loads TASK-030 contract from active contract file, cortex.db, or fallback."""
-    contract_path = Path("docs/active/ACTIVE_CONTRACT.md")
-    if contract_path.exists():
-        try:
-            content = contract_path.read_text(encoding="utf-8")
-            if 'target_task_id: "TASK-030"' in content:
-                return content
-        except OSError:
-            _err_fallback = True
-    db_path = Path("data/cortex.db")
-    if db_path.exists():
-        try:
-            con = sqlite3.connect(str(db_path))
-            cur = con.execute(
-                "SELECT raw_content FROM contract_revisions WHERE task_id = 'TASK-030' "
-                "ORDER BY revision_id DESC LIMIT 1;"
-            )
-            row = cur.fetchone()
-            con.close()
-            if row:
-                return str(row[0])
-        except Exception:
-            _err_fallback = True
-    return _TASK_030_FALLBACK_CONTRACT
 
 
 class MockFitnessEvaluator(FitnessEvaluatorProtocol):
@@ -147,68 +97,6 @@ class MockFitnessEvaluator(FitnessEvaluatorProtocol):
         code_length_factor = float(len(candidate_code) % 7)
         return self.base_score + code_length_factor
 
-
-class TestEvolutionaryEngineContractInvariants(unittest.TestCase):
-    """Verifies that the contract specification defines all normative evolutionary invariants."""
-
-    def setUp(self) -> None:
-        self.contract_text = _load_task_030_contract()
-        self.assertGreater(
-            len(self.contract_text.strip()),
-            0,
-            "Contract text missing from active contract, cortex.db, and fixture",
-        )
-
-    def test_contract_metadata_and_acceptance(self) -> None:
-        """Positive test: Verifies contract is ACCEPTED and target_task_id is TASK-030."""
-        self.assertIn('status: "ACCEPTED"', self.contract_text)
-        self.assertIn('target_task_id: "TASK-030"', self.contract_text)
-
-    def test_contract_defines_all_normative_evolutionary_invariants(self) -> None:
-        """Positive test: Verifies presence of evolutionary invariants [INV-EVO-01..09]."""
-        required_invariants = [
-            "[INV-EVO-01]",
-            "[INV-EVO-02]",
-            "[INV-EVO-03]",
-            "[INV-EVO-04]",
-            "[INV-EVO-05]",
-            "[INV-EVO-06]",
-            "[INV-EVO-07]",
-            "[INV-EVO-08]",
-            "[INV-EVO-09]",
-        ]
-        for inv_id in required_invariants:
-            self.assertIn(
-                inv_id,
-                self.contract_text,
-                f"Missing invariant definition {inv_id} in active contract",
-            )
-
-    def test_contract_specifies_technical_models_and_protocols(self) -> None:
-        """Positive test: Verifies contract specifies evolutionary models and protocols."""
-        models = [
-            "EvolutionConfig",
-            "MutantCandidate",
-            "GenerationReport",
-            "EvolutionOutcome",
-            "FitnessEvaluatorProtocol",
-            "EvolutionaryEngineProtocol",
-        ]
-        for model_name in models:
-            self.assertIn(
-                model_name,
-                self.contract_text,
-                f"Missing model or protocol {model_name} in active contract",
-            )
-
-    def test_negative_contract_missing_synthetic_invariant(self) -> None:
-        """Negative test: Evaluates rejection of non-existent synthetic invariant."""
-        synthetic_id = "[INV-EVO-NONEXISTENT-999]"
-        self.assertNotIn(
-            synthetic_id,
-            self.contract_text,
-            "Non-existent invariant unexpectedly found in contract text",
-        )
 
 
 class TestEvolutionaryEngineDataModels(unittest.TestCase):

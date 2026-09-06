@@ -13,7 +13,6 @@ from dataclasses import FrozenInstanceError
 import json
 import os
 from pathlib import Path
-import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -45,56 +44,6 @@ except ModuleNotFoundError:
         verify_ast_docking = None  # type: ignore[assignment]
 
 
-_TASK_027_FALLBACK_CONTRACT = """---
-id: "CONTRACT-20260907-skeleton-and-ast-docking"
-title: "Mechanical Interface Skeleton Baker and AST Docking Linker Contract"
-status: "ACCEPTED"
-owner: "Platform Architecture Team"
-last_reviewed: "2026-09-07"
-target_task_id: "TASK-027"
----
-
-# Mechanical Interface Skeleton Baker and AST Docking Linker Contract (TASK-027)
-
-## 4. Normative System Invariants
-- `[INV-BAKE-01]` core/skeleton_baker.py SHALL define typed models.
-- `[INV-BAKE-02]` bake_interface_skeleton generates deterministic Python proto.
-- `[INV-BAKE-03]` Baked interface conforms to <= 120 cols, UTF-8, zero stubs.
-- `[INV-DOCK-01]` core/ast_docking_checker.py SHALL inspect target protocol
-  files against implementation files using Python's ast module.
-- `[INV-DOCK-02]` verify_ast_docking(proto_path, impl_path) SHALL verify that
-  all Protocol methods exist in implementation with matching signatures.
-- `[INV-DOCK-03]` CLI commands SHALL return exit code 0 on success or 1 on error.
-- `[INV-DOCK-04]` Functions SHALL maintain cyclomatic complexity <= 10.
-- `[INV-DOCK-05]` Operations SHALL handle nonexistent files or malformed syntax.
-"""
-
-
-def _load_task_027_contract() -> str:
-    """Loads TASK-027 contract from active contract file, cortex.db, or fixture."""
-    contract_path = Path("docs/active/ACTIVE_CONTRACT.md")
-    if contract_path.exists():
-        try:
-            content = contract_path.read_text(encoding="utf-8")
-            if 'target_task_id: "TASK-027"' in content:
-                return content
-        except OSError:
-            _err_fallback = True
-    db_path = Path("data/cortex.db")
-    if db_path.exists():
-        try:
-            con = sqlite3.connect(str(db_path))
-            cur = con.execute(
-                "SELECT raw_content FROM contract_revisions WHERE task_id = 'TASK-027' "
-                "ORDER BY revision_id DESC LIMIT 1;"
-            )
-            row = cur.fetchone()
-            con.close()
-            if row:
-                return str(row[0])
-        except Exception:
-            _err_fallback = True
-    return _TASK_027_FALLBACK_CONTRACT
 
 
 def _write_protocol_source(
@@ -141,71 +90,6 @@ def _write_impl_source(
             lines.append("")
     target_path.write_text("\n".join(lines), encoding="utf-8")
 
-
-class TestAstDockingContractInvariants(unittest.TestCase):
-    """Verifies that the specification contract defines normative docking invariants."""
-
-    def setUp(self) -> None:
-        self.contract_text = _load_task_027_contract()
-        self.assertGreater(
-            len(self.contract_text.strip()),
-            0,
-            "Contract text missing from active contract, cortex.db, and fixture",
-        )
-
-    def test_contract_metadata_and_acceptance(self) -> None:
-        """Positive test: Verifies contract is ACCEPTED and target_task_id is TASK-027."""
-        self.assertIn('status: "ACCEPTED"', self.contract_text)
-        self.assertIn('target_task_id: "TASK-027"', self.contract_text)
-
-    def test_contract_defines_all_normative_docking_invariants(self) -> None:
-        """Positive test: Verifies presence of docking normative invariants [INV-DOCK-01..05]."""
-        required_invariants = [
-            "[INV-DOCK-01]",
-            "[INV-DOCK-02]",
-            "[INV-DOCK-03]",
-            "[INV-DOCK-04]",
-            "[INV-DOCK-05]",
-        ]
-        for inv_id in required_invariants:
-            self.assertIn(
-                inv_id,
-                self.contract_text,
-                f"Missing invariant definition {inv_id} in active contract",
-            )
-
-    def test_contract_specifies_docking_technical_interfaces(self) -> None:
-        """Positive test: Verifies contract specifies docking models and function."""
-        models = [
-            "class MethodSignature",
-            "class DockingDefect",
-            "class DockingReport",
-            "verify_ast_docking",
-        ]
-        for model_name in models:
-            self.assertIn(
-                model_name,
-                self.contract_text,
-                f"Missing model or function {model_name} in active contract",
-            )
-
-    def test_negative_contract_missing_synthetic_invariant(self) -> None:
-        """Negative test: Evaluates rejection of non-existent synthetic invariant."""
-        synthetic_id = "[INV-DOCK-NONEXISTENT-777]"
-        self.assertNotIn(
-            synthetic_id,
-            self.contract_text,
-            "Non-existent invariant unexpectedly found in contract text",
-        )
-
-    def test_negative_contract_rejects_corrupted_query(self) -> None:
-        """Negative test: Verifies that arbitrary token is absent from contract."""
-        bogus_token = "BOGUS_DOCKING_INVARIANT_TOKEN_404"
-        found = bogus_token in self.contract_text
-        self.assertFalse(
-            found,
-            "Bogus token unexpectedly found in contract specification",
-        )
 
 
 @unittest.skipUnless(

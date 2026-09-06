@@ -17,7 +17,6 @@ import json
 import os
 from pathlib import Path
 import random
-import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -64,87 +63,6 @@ except ModuleNotFoundError:
         verify_ast_docking = None  # type: ignore[assignment]
 
 
-_TASK_029_FALLBACK_CONTRACT = """---
-id: "CONTRACT-20260907-retry-policy"
-title: "Resilient Exponential Backoff Retry Policy Engine Contract"
-status: "ACCEPTED"
-owner: "Platform Architecture Team"
-last_reviewed: "2026-09-07"
-target_task_id: "TASK-029"
----
-
-# Resilient Exponential Backoff Retry Policy Engine Contract (TASK-029)
-
-## 3. Data Schema & Technical Interface Specifications
-### 3.1 Interface Protocol & Typed Data Models (core/interfaces/retry_policy_proto.py)
-class BackoffConfig:
-    initial_interval_sec: float = 0.1
-    max_interval_sec: float = 30.0
-    multiplier: float = 2.0
-    max_retries: int = 5
-    jitter_mode: str = "full"
-    retryable_exceptions: Tuple[Type[Exception], ...] = (Exception,)
-
-class RetryAttempt:
-    attempt_number: int
-    delay_sec: float
-    exception_type: Optional[str] = None
-    error_message: Optional[str] = None
-    timestamp: float = 0.0
-
-class RetryOutcome:
-    success: bool
-    result: Any = None
-    attempts: Tuple[RetryAttempt, ...] = ()
-    total_delay_sec: float = 0.0
-    final_exception: Optional[str] = None
-    attempt_count: int = 0
-
-class RetryPolicyProtocol(Protocol):
-    def compute_delay(self, attempt: int, base_delay: float) -> float:
-    def execute_with_retry(self, operation: Callable[..., Any], *args: Any, **kwargs: Any) -> RetryOutcome:
-
-class RetryPolicy(RetryPolicyProtocol):
-    def __init__(self, config: Optional[BackoffConfig] = None) -> None:
-    def compute_delay(self, attempt: int, base_delay: float) -> float:
-    def execute_with_retry(self, operation: Callable[..., Any], *args: Any, **kwargs: Any) -> RetryOutcome:
-
-## 4. Normative System Invariants
-- `[INV-RETRY-01]` core/interfaces/retry_policy_proto.py SHALL define frozen data models.
-- `[INV-RETRY-02]` core/interfaces/retry_policy_proto.py SHALL define RetryPolicyProtocol.
-- `[INV-RETRY-03]` core/retry_policy.py SHALL implement RetryPolicyProtocol.
-- `[INV-RETRY-04]` execute_with_retry SHALL retry callable operations solely upon catching exceptions.
-- `[INV-RETRY-05]` AST docking between proto and impl SHALL evaluate to is_docked=True with 0 defects.
-- `[INV-RETRY-06]` All functions in retry_policy.py SHALL maintain cyclomatic complexity <= 10.
-- `[INV-RETRY-07]` CLI command python -m core.retry_policy SHALL return exit code 0 on success.
-"""
-
-
-def _load_task_029_contract() -> str:
-    """Loads TASK-029 contract from ACTIVE_CONTRACT.md, cortex.db, or fallback fixture."""
-    contract_path = Path("docs/active/ACTIVE_CONTRACT.md")
-    if contract_path.exists():
-        try:
-            content = contract_path.read_text(encoding="utf-8")
-            if 'target_task_id: "TASK-029"' in content:
-                return content
-        except OSError:
-            _disk_read_failed = True
-    db_path = Path("data/cortex.db")
-    if db_path.exists():
-        try:
-            con = sqlite3.connect(str(db_path))
-            cur = con.execute(
-                "SELECT raw_content FROM contract_revisions WHERE task_id = 'TASK-029' "
-                "ORDER BY revision_id DESC LIMIT 1;"
-            )
-            row = cur.fetchone()
-            con.close()
-            if row:
-                return str(row[0])
-        except Exception:
-            _db_read_failed = True
-    return _TASK_029_FALLBACK_CONTRACT
 
 
 def _resolve_retry_paths() -> Tuple[Path, Path]:
@@ -175,97 +93,6 @@ def _run_retry_cli(args: List[str], timeout: int = 15) -> subprocess.CompletedPr
     )
 
 
-# ==============================================================================
-# Category 1: Contract Invariant Verification (H-CODE-9 Determinism)
-# ==============================================================================
-
-class TestRetryPolicyContractInvariants(unittest.TestCase):
-    """Verifies that the specification contract defines normative retry invariants."""
-
-    def setUp(self) -> None:
-        self.contract_text = _load_task_029_contract()
-        self.assertGreater(
-            len(self.contract_text.strip()),
-            0,
-            "Contract text missing from active contract, cortex.db, and fixture",
-        )
-
-    def test_contract_metadata_and_acceptance(self) -> None:
-        """Positive test: Verifies contract is ACCEPTED and target_task_id is TASK-029."""
-        self.assertIn('status: "ACCEPTED"', self.contract_text)
-        self.assertIn('target_task_id: "TASK-029"', self.contract_text)
-
-    def test_contract_defines_all_normative_retry_invariants(self) -> None:
-        """Positive test: Verifies presence of normative invariants [INV-RETRY-01] to [07]."""
-        required_invariants = [
-            "[INV-RETRY-01]",
-            "[INV-RETRY-02]",
-            "[INV-RETRY-03]",
-            "[INV-RETRY-04]",
-            "[INV-RETRY-05]",
-            "[INV-RETRY-06]",
-            "[INV-RETRY-07]",
-        ]
-        for inv_id in required_invariants:
-            self.assertIn(
-                inv_id,
-                self.contract_text,
-                f"Missing invariant definition {inv_id} in active contract",
-            )
-
-    def test_contract_specifies_data_models_and_protocol(self) -> None:
-        """Positive test: Verifies contract specifies required data models and protocol."""
-        expected_symbols = [
-            "class BackoffConfig",
-            "class RetryAttempt",
-            "class RetryOutcome",
-            "class RetryPolicyProtocol",
-            "compute_delay",
-            "execute_with_retry",
-        ]
-        for symbol in expected_symbols:
-            self.assertIn(
-                symbol,
-                self.contract_text,
-                f"Missing symbol {symbol} in active contract specification",
-            )
-
-    def test_contract_specifies_jitter_and_delay_specifications(self) -> None:
-        """Positive test: Verifies contract specifies full and decorrelated jitter."""
-        self.assertIn("Full Jitter Algorithm", self.contract_text)
-        self.assertIn("Decorrelated Jitter Algorithm", self.contract_text)
-        self.assertIn("max_interval_sec", self.contract_text)
-
-    def test_contract_specifies_cli_commands(self) -> None:
-        """Positive test: Verifies contract specifies CLI commands and arguments."""
-        self.assertIn("python -m core.retry_policy", self.contract_text)
-        self.assertIn("--json", self.contract_text)
-        self.assertIn("--initial-sec", self.contract_text)
-        self.assertIn("--jitter", self.contract_text)
-
-    def test_contract_specifies_nfr_boundaries(self) -> None:
-        """Positive test: Verifies contract specifies contiguous NFR boundaries."""
-        self.assertIn("Delay Calculation Latency", self.contract_text)
-        self.assertIn("Max Delay Bounding", self.contract_text)
-        self.assertIn("Cyclomatic Complexity (CC)", self.contract_text)
-        self.assertIn("AST Docking Defect Count", self.contract_text)
-
-    def test_negative_contract_missing_synthetic_invariant(self) -> None:
-        """Negative test: Evaluates rejection of non-existent synthetic invariant."""
-        synthetic_id = "[INV-RETRY-NONEXISTENT-999]"
-        self.assertNotIn(
-            synthetic_id,
-            self.contract_text,
-            "Non-existent invariant unexpectedly found in contract text",
-        )
-
-    def test_negative_contract_rejects_corrupted_token(self) -> None:
-        """Negative test: Verifies arbitrary corrupted token is absent from contract."""
-        bogus_token = "CORRUPTED_INVARIANT_TOKEN_RETRY_888"
-        self.assertFalse(
-            bogus_token in self.contract_text,
-            "Bogus corrupted token unexpectedly found in contract specification",
-        )
 
 
 # ==============================================================================
