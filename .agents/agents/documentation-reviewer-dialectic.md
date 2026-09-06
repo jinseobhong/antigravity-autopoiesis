@@ -1,5 +1,5 @@
 ---
-name: doc-reviewer-dialectic
+name: documentation-reviewer-dialectic
 description: Audits technical documentation for logical integrity, self-rationalization, trade-off honesty, and causal validity.
 role: subagent
 tools:

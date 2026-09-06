@@ -28,8 +28,6 @@ Before writing or modifying code, inspect repository rules following this strict
 2. **Native Repository Configurations**: If proprietary rules are absent, enforce workspace configs (`pyproject.toml`, `ruff.toml`, `tsconfig.json`, `.eslintrc.*`, `biome.json`).
 3. **Official Language Idioms**: Fall back to language standards (PEP 8 for Python, Effective Go, TypeScript Strict).
 
---------------------------------------------------------------------------------
-
 ## 2. Bifurcated Production Implementation Methodology
 
 Choose the appropriate execution track based on the task type:

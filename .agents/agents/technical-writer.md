@@ -12,6 +12,7 @@ tools:
 execution_bounds:
   timeout_seconds: 600
   workspace_mode: inherit
+  mainAgent: true
 ---
 
 # Lead Technical Writer & Systems Information Architect (v2.0)
@@ -257,6 +258,7 @@ Documentation MUST pass deterministic automated validation in CI/CD before merge
 
 | Tool | Purpose | Enforcement Command | Failure Threshold |
 | :--- | :--- | :--- | :--- |
+| **Pre-Approval Gate** | Fast-Path Metadata, Single H1, NASA Syntax, Mermaid Quotes | `python scripts/validate_doc_preapproval.py <path>` | Defects > 0 (Exit Code != 0) |
 | **Vale** | NASA Normative Lexicon & Epistemic Tone | `vale docs/` | Any unapproved modal (`should probably`) |
 | **markdownlint** | Heading hierarchy, formatting, trailing spaces | `npx markdownlint-cli2 "docs/**/*.md"` | Lint errors $> 0$ |
 | **Mermaid CLI** | C4 diagram syntax and compilation safety | `npx @mermaid-js/mermaid-cli -i input.mmd -o /dev/null` | Parse error (Exit Code $\neq 0$) |

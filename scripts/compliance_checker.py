@@ -6,10 +6,38 @@ technical documentation standards deterministically in < 0.5s.
 """
 
 import ast
+from dataclasses import dataclass
 import os
 import re
 import sys
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+
+
+@dataclass(frozen=True)
+class ComplianceDefect:
+    """Immutable value object representing a quantified compliance defect."""
+
+    type: str
+    line: int
+    message: str
+
+    def __getitem__(self, item: str) -> Any:
+        """Enables backward-compatible dictionary-style subscript access."""
+        if item == "type":
+            return self.type
+        if item == "line":
+            return str(self.line)
+        if item == "message":
+            return self.message
+        raise KeyError(item)
+
+    def get(self, item: str, default: Any = None) -> Any:
+        """Safe getter mimicking dict.get for backward compatibility."""
+        try:
+            return self[item]
+        except KeyError:
+            return default
+
 
 
 class CodeComplianceAuditor(ast.NodeVisitor):
@@ -18,107 +46,108 @@ class CodeComplianceAuditor(ast.NodeVisitor):
     def __init__(self, filename: str, content: str) -> None:
         self.filename = filename
         self.lines = content.splitlines()
-        self.defects: List[Dict[str, str]] = []
-        self.current_function: Optional[str] = None
+        self.defects: List[ComplianceDefect] = []
 
-    def audit(self) -> List[Dict[str, str]]:
+    def audit(self) -> List[ComplianceDefect]:
         """Executes full AST and line-by-line quantitative analysis."""
         self._audit_line_lengths()
         try:
             tree = ast.parse("\n".join(self.lines), filename=self.filename)
             self.visit(tree)
         except SyntaxError as err:
-            self.defects.append({
-                "type": "SYNTAX_ERROR",
-                "line": str(err.lineno or 0),
-                "message": f"Syntax error: {err.msg}"
-            })
+            self.defects.append(ComplianceDefect(
+                type="SYNTAX_ERROR",
+                line=err.lineno or 0,
+                message=f"Syntax error: {err.msg}"
+            ))
+        except (ValueError, RecursionError) as err:
+            self.defects.append(ComplianceDefect(
+                type="AST_PARSE_FAILURE",
+                line=1,
+                message=f"AST parsing failed: {err}"
+            ))
         return self.defects
 
     def _audit_line_lengths(self) -> None:
         """Checks for lines exceeding 120 columns."""
         for idx, line in enumerate(self.lines, 1):
             if len(line) > 120:
-                self.defects.append({
-                    "type": "LINE_LENGTH_EXCEEDED",
-                    "line": str(idx),
-                    "message": f"Line exceeds 120 chars ({len(line)} cols)"
-                })
+                self.defects.append(ComplianceDefect(
+                    type="LINE_LENGTH_EXCEEDED",
+                    line=idx,
+                    message=f"Line exceeds 120 chars ({len(line)} cols)"
+                ))
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         """Checks parameter counts and cyclomatic complexity."""
-        prev_func = self.current_function
-        self.current_function = node.name
-
-        # Parameter count check (Max 7 parameters)
+        # Parameter count check (Max 7 parameters including posonlyargs)
         total_args = (
             len(node.args.args)
+            + len(getattr(node.args, "posonlyargs", []))
             + len(node.args.kwonlyargs)
             + (1 if node.args.vararg else 0)
             + (1 if node.args.kwarg else 0)
         )
         if total_args > 7:
-            self.defects.append({
-                "type": "MAX_PARAMETERS_EXCEEDED",
-                "line": str(node.lineno),
-                "message": f"Function '{node.name}' has {total_args} params (max 7 allowed)"
-            })
+            self.defects.append(ComplianceDefect(
+                type="MAX_PARAMETERS_EXCEEDED",
+                line=node.lineno,
+                message=f"Function '{node.name}' has {total_args} params (max 7 allowed)"
+            ))
 
         # Cyclomatic complexity check (Target <= 10)
         cc = self._calculate_cyclomatic_complexity(node)
         if cc > 10:
-            self.defects.append({
-                "type": "CYCLOMATIC_COMPLEXITY_EXCEEDED",
-                "line": str(node.lineno),
-                "message": f"Function '{node.name}' has CC={cc} (max 10 allowed)"
-            })
+            self.defects.append(ComplianceDefect(
+                type="CYCLOMATIC_COMPLEXITY_EXCEEDED",
+                line=node.lineno,
+                message=f"Function '{node.name}' has CC={cc} (max 10 allowed)"
+            ))
 
         self.generic_visit(node)
-        self.current_function = prev_func
 
     visit_AsyncFunctionDef = visit_FunctionDef
 
     def visit_Pass(self, node: ast.Pass) -> None:
         """Flags lazy 'pass' statements in production logic."""
-        self.defects.append({
-            "type": "LAZY_STUB_PASS",
-            "line": str(node.lineno),
-            "message": "Lazy placeholder 'pass' statement is prohibited"
-        })
+        self.defects.append(ComplianceDefect(
+            type="LAZY_STUB_PASS",
+            line=node.lineno,
+            message="Lazy placeholder 'pass' statement is prohibited"
+        ))
         self.generic_visit(node)
 
     def visit_Assert(self, node: ast.Assert) -> None:
         """Flags tautological assertions like 'assert True'."""
         if isinstance(node.test, ast.Constant) and node.test.value is True:
-            self.defects.append({
-                "type": "TAUTOLOGICAL_ASSERTION",
-                "line": str(node.lineno),
-                "message": "Tautological 'assert True' is prohibited"
-            })
+            self.defects.append(ComplianceDefect(
+                type="TAUTOLOGICAL_ASSERTION",
+                line=node.lineno,
+                message="Tautological 'assert True' is prohibited"
+            ))
         self.generic_visit(node)
 
     def visit_Expr(self, node: ast.Expr) -> None:
         """Flags ellipsis (...) stubs outside docstrings."""
         if isinstance(node.value, ast.Constant) and node.value.value is ...:
-            self.defects.append({
-                "type": "LAZY_STUB_ELLIPSIS",
-                "line": str(node.lineno),
-                "message": "Placeholder ellipsis '...' stub is prohibited"
-            })
+            self.defects.append(ComplianceDefect(
+                type="LAZY_STUB_ELLIPSIS",
+                line=node.lineno,
+                message="Placeholder ellipsis '...' stub is prohibited"
+            ))
         self.generic_visit(node)
 
     def _calculate_cyclomatic_complexity(self, node: ast.AST) -> int:
         """Computes McCabe cyclomatic complexity for a given AST node."""
         complexity = 1
         for child in ast.walk(node):
-            if isinstance(child, (ast.If, ast.While, ast.For, ast.AsyncFor)):
-                complexity += 1
-            elif isinstance(child, (ast.ExceptHandler, ast.With, ast.AsyncWith)):
+            if isinstance(
+                child,
+                (ast.If, ast.IfExp, ast.While, ast.For, ast.AsyncFor, ast.ExceptHandler, ast.With, ast.AsyncWith),
+            ):
                 complexity += 1
             elif isinstance(child, ast.BoolOp):
                 complexity += len(child.values) - 1
-            elif isinstance(child, ast.IfExp):
-                complexity += 1
         return complexity
 
 
@@ -135,13 +164,22 @@ class DocComplianceAuditor:
         "easy to use",
     ]
 
+    BANNED_PATTERN = re.compile(
+        r"\b(" + "|".join(re.escape(w) for w in BANNED_ADJECTIVES) + r")\b",
+        re.IGNORECASE,
+    )
+    COMPOUND_SHALL_PATTERN = re.compile(r"\bSHALL\b.+\b(and|as well as|along with)\b.+")
+
     def __init__(self, filename: str, content: str) -> None:
         self.filename = filename
-        self.content = content
-        self.lines = content.splitlines()
-        self.defects: List[Dict[str, str]] = []
+        normalized = filename.replace("\\", "/").lower()
+        self.is_agent_or_skill = ".agents" in normalized or normalized.endswith("skill.md")
+        self.is_rule_def = "documentation_tone" in normalized or self.is_agent_or_skill
+        self.content = content.lstrip("\ufeff")
+        self.lines = self.content.splitlines()
+        self.defects: List[ComplianceDefect] = []
 
-    def audit(self) -> List[Dict[str, str]]:
+    def audit(self) -> List[ComplianceDefect]:
         """Runs deterministic checks for metadata, banned words, and structure."""
         self._audit_frontmatter()
         self._audit_banned_adjectives()
@@ -152,126 +190,182 @@ class DocComplianceAuditor:
     def _audit_frontmatter(self) -> None:
         """Ensures document has valid YAML frontmatter appropriate for its type."""
         if not self.content.startswith("---"):
-            self.defects.append({
-                "type": "MISSING_FRONTMATTER",
-                "line": "1",
-                "message": "Document must begin with YAML frontmatter delimiter (---)"
-            })
+            self.defects.append(ComplianceDefect(
+                type="MISSING_FRONTMATTER",
+                line=1,
+                message="Document must begin with YAML frontmatter delimiter (---)"
+            ))
             return
 
         parts = self.content.split("---", 2)
         if len(parts) < 3:
-            self.defects.append({
-                "type": "MALFORMED_FRONTMATTER",
-                "line": "1",
-                "message": "Frontmatter is not closed with trailing '---'"
-            })
+            self.defects.append(ComplianceDefect(
+                type="MALFORMED_FRONTMATTER",
+                line=1,
+                message="Frontmatter is not closed with trailing '---'"
+            ))
             return
 
         header = parts[1]
-        is_agent_config = ".agents" in self.filename or "SKILL.md" in self.filename
-        
-        if is_agent_config:
+        if self.is_agent_or_skill:
             required_keys = ["name:", "description:"]
         else:
             required_keys = ["id:", "status:", "owner:"]
 
         for key in required_keys:
             if key not in header:
-                self.defects.append({
-                    "type": "MISSING_METADATA_KEY",
-                    "line": "1",
-                    "message": f"Frontmatter missing mandatory field: {key.replace(':', '')}"
-                })
+                self.defects.append(ComplianceDefect(
+                    type="MISSING_METADATA_KEY",
+                    line=1,
+                    message=f"Frontmatter missing mandatory field: {key.replace(':', '')}"
+                ))
 
     def _audit_banned_adjectives(self) -> None:
         """Flags unquantified marketing fluff and handwaving words outside rule definitions."""
-        # Skip banned word check if this file is the rule defining the banned words
-        if "DOCUMENTATION_TONE" in self.filename or "SKILL.md" in self.filename:
+        if self.is_rule_def:
             return
 
         for idx, line in enumerate(self.lines, 1):
-            lower = line.lower()
-            for banned in self.BANNED_ADJECTIVES:
-                if re.search(r"\b" + re.escape(banned) + r"\b", lower):
-                    self.defects.append({
-                        "type": "BANNED_HANDWAVING_WORD",
-                        "line": str(idx),
-                        "message": f"Unquantified adjective '{banned}' is prohibited"
-                    })
+            match = self.BANNED_PATTERN.search(line)
+            if match:
+                self.defects.append(ComplianceDefect(
+                    type="BANNED_HANDWAVING_WORD",
+                    line=idx,
+                    message=f"Unquantified adjective '{match.group(0).lower()}' is prohibited"
+                ))
 
-    def _audit_single_h1(self) -> None:
-        """Ensures document has exactly one top-level H1 header outside code blocks."""
+    def _count_h1_headings(self) -> int:
+        """Counts top-level H1 headings excluding frontmatter and code blocks."""
         h1_count = 0
         in_code_block = False
-        for line in self.lines:
+        in_frontmatter = False
+
+        for idx, line in enumerate(self.lines):
             stripped = line.strip()
+            if idx == 0 and stripped == "---":
+                in_frontmatter = True
+                continue
+            if in_frontmatter:
+                if stripped == "---":
+                    in_frontmatter = False
+                continue
+
             if stripped.startswith("```"):
                 in_code_block = not in_code_block
                 continue
-            if not in_code_block and line.startswith("# ") and not line.startswith("## "):
-                h1_count += 1
 
+            if in_code_block:
+                continue
+
+            if line.startswith("# "):
+                h1_count += 1
+        return h1_count
+
+    def _audit_single_h1(self) -> None:
+        """Ensures document has exactly one top-level H1 header outside code blocks."""
+        h1_count = self._count_h1_headings()
         if h1_count == 0:
-            self.defects.append({
-                "type": "MISSING_H1_HEADER",
-                "line": "1",
-                "message": "Document must contain exactly one top-level '# ' H1 heading"
-            })
+            self.defects.append(ComplianceDefect(
+                type="MISSING_H1_HEADER",
+                line=1,
+                message="Document must contain exactly one top-level '# ' H1 heading"
+            ))
         elif h1_count > 1:
-            self.defects.append({
-                "type": "MULTIPLE_H1_HEADERS",
-                "line": "1",
-                "message": f"Document contains {h1_count} H1 headings (maximum 1 allowed)"
-            })
+            self.defects.append(ComplianceDefect(
+                type="MULTIPLE_H1_HEADERS",
+                line=1,
+                message=f"Document contains {h1_count} H1 headings (maximum 1 allowed)"
+            ))
 
     def _audit_atomic_normative(self) -> None:
         """Flags compound requirement statements violating the NASA single-thought mandate."""
-        # Skip meta-rules and skill files that explain the rule itself
-        if ".agents" in self.filename or "SKILL.md" in self.filename:
+        if self.is_agent_or_skill:
             return
 
         for idx, line in enumerate(self.lines, 1):
-            if "SHALL" in line and not line.strip().startswith("#"):
-                # Detect compound SHALL with coordinating conjunctions
-                if re.search(r"\bSHALL\b.+\b(and|as well as|along with)\b.+", line, re.IGNORECASE):
-                    self.defects.append({
-                        "type": "COMPOUND_REQUIREMENT_VIOLATION",
-                        "line": str(idx),
-                        "message": "Requirement contains compound conjunction; must be split into atomic SHALLs"
-                    })
+            stripped = line.strip()
+            if "SHALL" not in line or stripped.startswith("#"):
+                continue
+            if self.COMPOUND_SHALL_PATTERN.search(line):
+                self.defects.append(ComplianceDefect(
+                    type="COMPOUND_REQUIREMENT_VIOLATION",
+                    line=idx,
+                    message="Requirement contains compound conjunction; must be split into atomic SHALLs"
+                ))
 
 
-def audit_file(filepath: str) -> Tuple[str, List[Dict[str, str]]]:
+MAX_AUDIT_FILE_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB safety ceiling
+IGNORED_DIRECTORIES = {
+    ".git", ".hg", ".svn", ".venv", "venv", "env",
+    "node_modules", "__pycache__", ".pytest_cache",
+    ".mypy_cache", ".ruff_cache", "build", "dist", ".eggs"
+}
+
+
+def audit_file(filepath: str) -> Tuple[str, List[ComplianceDefect]]:
     """Audits a single file based on its extension."""
-    if not os.path.exists(filepath):
-        return filepath, [{"type": "FILE_NOT_FOUND", "line": "0", "message": f"File not found: {filepath}"}]
+    try:
+        if not os.path.exists(filepath):
+            return filepath, [ComplianceDefect(
+                type="FILE_NOT_FOUND",
+                line=0,
+                message=f"File not found: {filepath}"
+            )]
 
-    with open(filepath, "r", encoding="utf-8", errors="replace") as f:
-        content = f.read()
+        file_size = os.path.getsize(filepath)
+        if file_size > MAX_AUDIT_FILE_SIZE_BYTES:
+            return filepath, [ComplianceDefect(
+                type="FILE_TOO_LARGE",
+                line=0,
+                message=f"File size ({file_size} bytes) exceeds limit of {MAX_AUDIT_FILE_SIZE_BYTES} bytes"
+            )]
 
-    if filepath.endswith(".py"):
-        auditor = CodeComplianceAuditor(filepath, content)
-        return filepath, auditor.audit()
-    if filepath.endswith(".md"):
-        auditor_doc = DocComplianceAuditor(filepath, content)
-        return filepath, auditor_doc.audit()
+        with open(filepath, "r", encoding="utf-8-sig", errors="replace") as f:
+            content = f.read()
 
-    return filepath, []
+        if filepath.endswith(".py"):
+            auditor = CodeComplianceAuditor(filepath, content)
+            return filepath, auditor.audit()
+        if filepath.endswith(".md"):
+            auditor_doc = DocComplianceAuditor(filepath, content)
+            return filepath, auditor_doc.audit()
+
+        return filepath, []
+    except OSError as err:
+        return filepath, [ComplianceDefect(
+            type="IO_READ_ERROR",
+            line=0,
+            message=f"Cannot read file: {err}"
+        )]
+    except Exception as err:
+        return filepath, [ComplianceDefect(
+            type="AUDITOR_INTERNAL_ERROR",
+            line=0,
+            message=f"Unexpected auditor error: {err}"
+        )]
+
+
+def _walk_directory_files(directory: str) -> List[str]:
+    """Recursively collects Python and Markdown files while skipping ignored trees."""
+    collected = []
+    for root, dirs, files in os.walk(directory):
+        dirs[:] = [d for d in dirs if d not in IGNORED_DIRECTORIES and not d.startswith(".")]
+        for file in files:
+            if file.endswith((".py", ".md")):
+                collected.append(os.path.join(root, file))
+    return collected
 
 
 def _collect_target_files(paths: List[str]) -> List[str]:
     """Collects all .py and .md files from paths deterministically."""
-    collected = []
+    collected: List[str] = []
     for path in paths:
         if os.path.isdir(path):
-            for root, _, files in os.walk(path):
-                for file in files:
-                    if file.endswith((".py", ".md")):
-                        collected.append(os.path.join(root, file))
-        elif os.path.exists(path):
+            collected.extend(_walk_directory_files(path))
+        else:
+            # Pass through non-directory (including non-existent files) so audit_file reports errors
             collected.append(path)
-    return collected
+    return sorted(collected)
 
 
 def run_cli(target_paths: List[str]) -> int:
@@ -289,7 +383,7 @@ def run_cli(target_paths: List[str]) -> int:
             total_defects += len(defects)
             print(f"\n[FAIL] {path}")
             for d in defects:
-                print(f"  - L{d['line']}: [{d['type']}] {d['message']}")
+                print(f"  - L{d.line}: [{d.type}] {d.message}")
         else:
             print(f"[PASS] {path}")
 

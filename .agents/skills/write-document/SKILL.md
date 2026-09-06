@@ -9,7 +9,7 @@ description:
 
 # NASA-Grade Technical Documentation Protocol (v2.0)
 
-A deterministic, high-rigor engineering runbook that delegates documentation authoring to the specialized `technical-writer` subagent via `invoke_subagent`, featuring automated peer-review handoff.
+A deterministic, high-rigor engineering runbook that delegates documentation authoring to the specialized `technical-writer` subagent via `invoke_subagent`, featuring automated pre-approval lint gating and peer-review handoff.
 
 ---
 
@@ -30,7 +30,7 @@ When technical documentation authoring is requested, the orchestrator SHALL disp
       "Role": "Lead Technical Writer",
       "Model": "inherit",
       "Workspace": "inherit",
-      "Prompt": "Author NASA-grade technical documentation for: <TOPIC_OR_SPEC>.\nTarget file: <TARGET_PATH> (default: docs/<PATH>.md).\n--caller-id: <CALLER_CONVERSATION_ID>\n\nGovernance & Rules:\n- Strictly enforce @.agents/rules/DOCUMENTATION_TONE.md (Fallback: repository tone in GEMINI.md)\n- Strictly enforce @.agents/rules/DOCUMENTATION_STANDARD.md (Fallback: repository standards in GEMINI.md)\n\nExecution Bounds & Protocol:\n1. Execute 5-Stage High-Rigor Pipeline: Discovery -> Framing -> Normative Synthesis -> Quantitative Modeling -> Quality Gate.\n2. Create necessary parent directories and write the draft to <TARGET_PATH>.\n3. Upon completion, notify the orchestrator via send_message(Recipient='<CALLER_CONVERSATION_ID>', Message='Document authored successfully at <TARGET_PATH>. Summary: <SUMMARY>') before completing your turn."
+      "Prompt": "Author NASA-grade technical documentation for: <TOPIC_OR_SPEC>.\nTarget file: <TARGET_PATH> (default: docs/<PATH>.md).\n--caller-id: <CALLER_CONVERSATION_ID>\n\nGovernance & Rules:\n- Strictly enforce @.agents/rules/DOCUMENTATION_TONE.md (Fallback: repository tone in GEMINI.md)\n- Strictly enforce @.agents/rules/DOCUMENTATION_STANDARD.md (Fallback: repository standards in GEMINI.md)\n\nExecution Bounds & Protocol:\n1. Execute 5-Stage Pipeline: Discovery -> Framing -> Normative Synthesis -> Quantitative Modeling -> Quality Gate.\n2. Create necessary parent directories and write the draft to <TARGET_PATH>.\n3. Execute Pre-Approval Lint Gate: run 'python scripts/validate_doc_preapproval.py <TARGET_PATH>' and verify 0 defects.\n4. If defects are detected, perform immediate self-remediation until the pre-approval check exits with code 0.\n5. Upon 100% verification clearance, notify orchestrator via send_message(Recipient='<CALLER_CONVERSATION_ID>', Message='Document authored and verified successfully at <TARGET_PATH>. Summary: <SUMMARY>') before completing your turn."
     }
   ]
 }
@@ -73,14 +73,29 @@ Before presenting the completed document, execute the pre-publication audit chec
 - [ ] **Link Integrity**: Single H1 header, clean section nesting, and all code references use valid `file:///` or relative links.
 - [ ] **Trade-Offs Explicit**: Operational overhead, failure blast radius, and negative consequences documented.
 
+### Stage 5: Pre-Approval Lint Gate & Quality Verification
+Immediately after drafting the document and saving it to the sandbox, execute the automated preflight verification script before submitting for peer review or requesting approval:
+
+1. **Lint Execution Command**:
+   ```bash
+   python scripts/validate_doc_preapproval.py <file_path>
+   ```
+2. **Deterministic Gatekeeper Rules**:
+   - **Defects Detected (`exit code != 0`)**: Peer review dispatch is **BLOCKED**. The writer MUST resolve all flagged issues (unquoted Mermaid nodes, missing frontmatter keys, compound requirements, unclosed blocks) and re-verify.
+   - **Zero Defects (`exit code == 0`)**: Preflight clearance granted. Proceed to Section 3 peer-review handoff.
+
 ---
 
 ## 3. Automated Handoff to Adversarial Peer Review (`review-documentation`)
 
-Once the `technical-writer` finishes authoring the draft:
-1. The draft artifact is persisted to `<TARGET_PATH>` in the shared repository.
-2. The orchestrator SHALL automatically invoke the **`review-documentation`** skill to dispatch the 3 concurrent qualitative reviewers:
+Once the `technical-writer` completes authoring and reports completion:
+1. **Dual-Defense Verification**: The orchestrator SHALL independently execute the pre-approval check:
+   ```bash
+   python scripts/validate_doc_preapproval.py <TARGET_PATH>
+   ```
+   If any defects are returned, the orchestrator SHALL abort peer-review dispatch and feed the defect list back to `technical-writer` for immediate revision.
+2. **Peer Review Dispatch**: Upon verified 0-defect clearance, the orchestrator SHALL automatically invoke the **`review-documentation`** skill to dispatch the 3 concurrent qualitative reviewers:
    - **`documentation-reviewer-completeness`**: Audits missing failure modes and unstated assumptions.
    - **`documentation-reviewer-dialectic`**: Audits logical consistency and trade-off honesty.
    - **`documentation-reviewer-usability`**: Audits operational ergonomics and step verification.
-3. If peer review issues a `REJECTED` or `CONDITIONAL_PASS` verdict, the orchestrator enters an automated revision loop, feeding the remediation checklist back to `technical-writer` until `APPROVED`.
+3. **Remediation Loop**: If peer review issues a `REJECTED` or `CONDITIONAL_PASS` verdict, the orchestrator enters an automated revision loop, feeding the remediation checklist back to `technical-writer` until `APPROVED`.
