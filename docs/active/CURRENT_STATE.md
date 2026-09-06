@@ -171,6 +171,7 @@ flowchart TD
         PRM_127["TASK-027: Mechanical Interface Skeleton Baker & AST Docking Linker (v1.0)"]
         PRM_128["TASK-028: Dialectical Requirements Interrogator & Adversarial Red Team Engine (v1.0)"]
         PRM_129["TASK-029: Resilient Exponential Backoff Retry Policy Engine (v1.0)"]
+        PRM_130["TASK-030: AI-Native Evolutionary Recombination Engine (v1.0)"]
     end
 
     ColPlanned -->|"Assign Available Slot"| ColActive
@@ -211,6 +212,7 @@ flowchart TD
 | **`TASK-027`** | Mechanical Interface Skeleton Baker & AST Docking Linker | `PROMOTED` | 0/2 | Tier 2 (Code) | Platform Lead | 50 companion tests pass (0.74s); 344 full tests pass; Clean AST; Fail-open verified. |
 | **`TASK-028`** | Dialectical Requirements Interrogator & Adversarial Red Team Engine | `PROMOTED` | 0/2 | Tier 2 (Code) | Platform Lead | 31 companion tests pass (8.11s); 375 full tests pass; Clean AST; Fail-open verified. |
 | **`TASK-029`** | Resilient Exponential Backoff Retry Policy Engine | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Engineer | 45 companion tests pass (0.35s); 420 full tests pass; Clean AST; AST Docked; Fail-open verified. |
+| **`TASK-030`** | AI-Native Evolutionary Recombination Engine | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Engineer | 41 companion tests pass (0.99s); 461 full tests pass; Clean AST; AST Docked; Fail-open verified. |
 
 ---
 
