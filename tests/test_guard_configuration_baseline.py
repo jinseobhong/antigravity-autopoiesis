@@ -22,52 +22,28 @@ from typing import Any, Dict, List, Optional, Tuple
 import unittest
 from unittest import mock
 
-try:
-    from scripts.guard_configuration_baseline import (
-        ARCHITECTURE_SYNC_DIRECTIVE_MESSAGE,
-        COMMIT_DIRECTIVE_MESSAGE,
-        EPHEMERAL_PATTERNS,
-        PREFLIGHT_FAILED_DIRECTIVE_MESSAGE,
-        STATE_COMPACTION_DIRECTIVE_MESSAGE,
-        ConfigurationBaselineReport,
-        HookInvocationContext,
-        build_cli_parser,
-        check_architecture_sync,
-        check_preflight_verification,
-        check_state_compaction,
-        evaluate_baseline,
-        inspect_ledger_tasks,
-        is_ephemeral_path,
-        main,
-        parse_git_status_lines,
-        parse_invocation_context,
-        query_git_status,
-        read_stdin_payload,
-        resolve_repo_root,
-    )
-except ModuleNotFoundError:
-    from sandbox.scripts.guard_configuration_baseline import (
-        ARCHITECTURE_SYNC_DIRECTIVE_MESSAGE,
-        COMMIT_DIRECTIVE_MESSAGE,
-        EPHEMERAL_PATTERNS,
-        PREFLIGHT_FAILED_DIRECTIVE_MESSAGE,
-        STATE_COMPACTION_DIRECTIVE_MESSAGE,
-        ConfigurationBaselineReport,
-        HookInvocationContext,
-        build_cli_parser,
-        check_architecture_sync,
-        check_preflight_verification,
-        check_state_compaction,
-        evaluate_baseline,
-        inspect_ledger_tasks,
-        is_ephemeral_path,
-        main,
-        parse_git_status_lines,
-        parse_invocation_context,
-        query_git_status,
-        read_stdin_payload,
-        resolve_repo_root,
-    )
+from scripts.guard_configuration_baseline import (
+    ARCHITECTURE_SYNC_DIRECTIVE_MESSAGE,
+    COMMIT_DIRECTIVE_MESSAGE,
+    EPHEMERAL_PATTERNS,
+    PREFLIGHT_FAILED_DIRECTIVE_MESSAGE,
+    STATE_COMPACTION_DIRECTIVE_MESSAGE,
+    ConfigurationBaselineReport,
+    HookInvocationContext,
+    build_cli_parser,
+    check_architecture_sync,
+    check_preflight_verification,
+    check_state_compaction,
+    evaluate_baseline,
+    inspect_ledger_tasks,
+    is_ephemeral_path,
+    main,
+    parse_git_status_lines,
+    parse_invocation_context,
+    query_git_status,
+    read_stdin_payload,
+    resolve_repo_root,
+)
 
 
 def _resolve_guard_script_path() -> Path:

@@ -17,18 +17,11 @@ import re
 import sys
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-try:
-    from core.requirements_extractor import (
-        AutoImmunizedNFR,
-        RequirementsSpec,
-        extract_requirements,
-    )
-except ModuleNotFoundError:
-    from sandbox.core.requirements_extractor import (
-        AutoImmunizedNFR,
-        RequirementsSpec,
-        extract_requirements,
-    )
+from core.requirements_extractor import (
+    AutoImmunizedNFR,
+    RequirementsSpec,
+    extract_requirements,
+)
 
 
 # ==============================================================================
@@ -299,10 +292,7 @@ def _query_cortex_lessons(
         if not filtered:
             return []
         fts_query = " ".join(filtered)
-        try:
-            from core.cortex_knowledge import query_events
-        except ModuleNotFoundError:
-            from sandbox.core.cortex_knowledge import query_events
+        from core.cortex_knowledge import query_events
         return query_events(
             query_str=fts_query,
             outcome="FAILURE",

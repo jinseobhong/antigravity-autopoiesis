@@ -14,28 +14,16 @@ import tempfile
 from typing import Any, Dict, List
 import unittest
 
-try:
-    from core.cortex_docs import init_cortex_db, snapshot_state_ledger
-    from core.state_compactor import (
-        _build_compacted_content,
-        _parse_promoted_row,
-        compact_state_ledger,
-        count_promoted_kanban_nodes,
-        count_total_promoted_tasks,
-        extract_promoted_table_rows,
-        generate_archive_markdown,
-    )
-except ModuleNotFoundError:
-    from sandbox.core.cortex_docs import init_cortex_db, snapshot_state_ledger
-    from sandbox.core.state_compactor import (
-        _build_compacted_content,
-        _parse_promoted_row,
-        compact_state_ledger,
-        count_promoted_kanban_nodes,
-        count_total_promoted_tasks,
-        extract_promoted_table_rows,
-        generate_archive_markdown,
-    )
+from core.cortex_docs import init_cortex_db, snapshot_state_ledger
+from core.state_compactor import (
+    _build_compacted_content,
+    _parse_promoted_row,
+    compact_state_ledger,
+    count_promoted_kanban_nodes,
+    count_total_promoted_tasks,
+    extract_promoted_table_rows,
+    generate_archive_markdown,
+)
 
 
 SAMPLE_LEDGER_HEADER = (

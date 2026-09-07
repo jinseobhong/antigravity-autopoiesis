@@ -260,11 +260,8 @@ def check_preflight_verification(
         try:
             from scripts.preflight_check import run_preflight
         except ModuleNotFoundError:
-            try:
-                import preflight_check as preflight_mod  # type: ignore[import-not-found]
-                run_preflight = preflight_mod.run_preflight
-            except ModuleNotFoundError:
-                from sandbox.scripts.preflight_check import run_preflight
+            import preflight_check as preflight_mod  # type: ignore[import-not-found]
+            run_preflight = preflight_mod.run_preflight
 
         report = run_preflight(root_path=repo_root, quick=False)
         if not report.passed:

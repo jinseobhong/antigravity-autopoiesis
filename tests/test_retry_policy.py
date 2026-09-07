@@ -24,43 +24,17 @@ import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
 import unittest
 
-try:
-    from core.interfaces.retry_policy_proto import (
-        BackoffConfig,
-        RetryAttempt,
-        RetryOutcome,
-        RetryPolicyProtocol,
-    )
-    from core.retry_policy import RetryPolicy
-    _MODULE_AVAILABLE = True
-except ModuleNotFoundError:
-    try:
-        from sandbox.core.interfaces.retry_policy_proto import (
-            BackoffConfig,
-            RetryAttempt,
-            RetryOutcome,
-            RetryPolicyProtocol,
-        )
-        from sandbox.core.retry_policy import RetryPolicy
-        _MODULE_AVAILABLE = True
-    except ModuleNotFoundError:
-        _MODULE_AVAILABLE = False
-        BackoffConfig = None  # type: ignore[assignment]
-        RetryAttempt = None  # type: ignore[assignment]
-        RetryOutcome = None  # type: ignore[assignment]
-        RetryPolicyProtocol = None  # type: ignore[assignment]
-        RetryPolicy = None  # type: ignore[assignment]
+from core.interfaces.retry_policy_proto import (
+    BackoffConfig,
+    RetryAttempt,
+    RetryOutcome,
+    RetryPolicyProtocol,
+)
+from core.retry_policy import RetryPolicy
+_MODULE_AVAILABLE = True
 
-try:
-    from core.ast_docking_checker import verify_ast_docking
-    _AST_CHECKER_AVAILABLE = True
-except ModuleNotFoundError:
-    try:
-        from sandbox.core.ast_docking_checker import verify_ast_docking
-        _AST_CHECKER_AVAILABLE = True
-    except ModuleNotFoundError:
-        _AST_CHECKER_AVAILABLE = False
-        verify_ast_docking = None  # type: ignore[assignment]
+from core.ast_docking_checker import verify_ast_docking
+_AST_CHECKER_AVAILABLE = True
 
 
 

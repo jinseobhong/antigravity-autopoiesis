@@ -7,22 +7,13 @@ from pathlib import Path
 import tempfile
 import unittest
 
-try:
-    from core.cortex_docs import (
-        compute_sha256,
-        get_connection,
-        init_cortex_db,
-        restore_archive,
-        trigger_contract_eviction,
-    )
-except ModuleNotFoundError:
-    from sandbox.core.cortex_docs import (
-        compute_sha256,
-        get_connection,
-        init_cortex_db,
-        restore_archive,
-        trigger_contract_eviction,
-    )
+from core.cortex_docs import (
+    compute_sha256,
+    get_connection,
+    init_cortex_db,
+    restore_archive,
+    trigger_contract_eviction,
+)
 
 
 class TestCortexRestore(unittest.TestCase):

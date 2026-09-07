@@ -14,36 +14,20 @@ import tempfile
 import time
 import unittest
 
-try:
-    from core.cortex_knowledge import (
-        calculate_decay_weight,
-        get_cortex_stats,
-        get_grounding_directives,
-        init_knowledge_tables,
-        list_parked_tasks,
-        park_task,
-        query_events,
-        record_event,
-        sanitize_fts_query,
-        unpark_task,
-        vacuum_decay,
-    )
-    from core.cortex_docs import get_connection
-except ModuleNotFoundError:
-    from sandbox.core.cortex_knowledge import (
-        calculate_decay_weight,
-        get_cortex_stats,
-        get_grounding_directives,
-        init_knowledge_tables,
-        list_parked_tasks,
-        park_task,
-        query_events,
-        record_event,
-        sanitize_fts_query,
-        unpark_task,
-        vacuum_decay,
-    )
-    from sandbox.core.cortex_docs import get_connection
+from core.cortex_knowledge import (
+    calculate_decay_weight,
+    get_cortex_stats,
+    get_grounding_directives,
+    init_knowledge_tables,
+    list_parked_tasks,
+    park_task,
+    query_events,
+    record_event,
+    sanitize_fts_query,
+    unpark_task,
+    vacuum_decay,
+)
+from core.cortex_docs import get_connection
 
 
 
@@ -421,13 +405,10 @@ class TestCortexKnowledgePersistence(unittest.TestCase):
 
     def test_cli_dispatch_and_execution_sla(self) -> None:
         """Verifies CLI subcommands work end-to-end and measure latency."""
-        try:
-            from core.cortex import main as cortex_cli_main, build_parser
-            p = build_parser()
-            if "record" not in p._subparsers._group_actions[0].choices:
-                raise ImportError("Unpromoted core.cortex")
-        except (ModuleNotFoundError, ImportError, AttributeError):
-            from sandbox.core.cortex import main as cortex_cli_main
+        from core.cortex import main as cortex_cli_main, build_parser
+        p = build_parser()
+        if "record" not in p._subparsers._group_actions[0].choices:
+            raise ImportError("Unpromoted core.cortex")
 
         import io
         from contextlib import redirect_stdout, redirect_stderr
@@ -542,13 +523,10 @@ class TestCortexKnowledgePersistence(unittest.TestCase):
 
     def test_negative_cli_command_handling(self) -> None:
         """Asserts error return on unparking non-existent task and CLI rejection of invalid commands."""
-        try:
-            from core.cortex import main as cortex_cli_main, build_parser
-            p = build_parser()
-            if "record" not in p._subparsers._group_actions[0].choices:
-                raise ImportError("Unpromoted core.cortex")
-        except (ModuleNotFoundError, ImportError, AttributeError):
-            from sandbox.core.cortex import main as cortex_cli_main
+        from core.cortex import main as cortex_cli_main, build_parser
+        p = build_parser()
+        if "record" not in p._subparsers._group_actions[0].choices:
+            raise ImportError("Unpromoted core.cortex")
 
         # Non-existent unpark exits with 1
         import io

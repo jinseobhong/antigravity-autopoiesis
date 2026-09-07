@@ -8,20 +8,12 @@ import sqlite3
 import tempfile
 import unittest
 
-try:
-    from core.cortex_docs import (
-        compute_sha256,
-        get_connection,
-        init_cortex_db,
-        parse_frontmatter,
-    )
-except ModuleNotFoundError:
-    from sandbox.core.cortex_docs import (
-        compute_sha256,
-        get_connection,
-        init_cortex_db,
-        parse_frontmatter,
-    )
+from core.cortex_docs import (
+    compute_sha256,
+    get_connection,
+    init_cortex_db,
+    parse_frontmatter,
+)
 
 
 class TestCortexDocsBase(unittest.TestCase):

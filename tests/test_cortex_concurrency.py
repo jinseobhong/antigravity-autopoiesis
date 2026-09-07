@@ -9,12 +9,8 @@ import sys
 import tempfile
 import unittest
 
-try:
-    from core.cortex import main as cortex_cli_main
-    from core.cortex_docs import _spool_record, init_cortex_db
-except ModuleNotFoundError:
-    from sandbox.core.cortex import main as cortex_cli_main
-    from sandbox.core.cortex_docs import _spool_record, init_cortex_db
+from core.cortex import main as cortex_cli_main
+from core.cortex_docs import _spool_record, init_cortex_db
 
 
 class TestCortexConcurrencyAndCLI(unittest.TestCase):

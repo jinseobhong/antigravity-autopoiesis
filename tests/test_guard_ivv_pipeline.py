@@ -1,4 +1,4 @@
-﻿"""
+"""
 Companion test suite for Sovereign Orchestrator & Read-Only Subagent Guard Hook.
 
 Evaluates path normalization, transcript role detection, sovereign authoring RBAC, and CLI I/O.
@@ -26,8 +26,8 @@ class TestGuardPathNormalization(unittest.TestCase):
 
     def test_normalize_relative_path(self) -> None:
         """Positive test: Verifies simple relative paths retain forward slashes."""
-        res = _normalize_path("core/test_engine/worker.py")
-        self.assertEqual(res, "core/test_engine/worker.py")
+        res = _normalize_path("core/worker.py")
+        self.assertEqual(res, "core/worker.py")
 
     def test_normalize_windows_absolute_path_with_workspace(self) -> None:
         """Positive test: Strips workspace prefix from Windows absolute path."""

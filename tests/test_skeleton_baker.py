@@ -19,35 +19,15 @@ import tempfile
 from typing import List, Optional, Tuple
 import unittest
 
-try:
-    from core.skeleton_baker import (
-        DataClassDef,
-        FieldDef,
-        InterfaceBundle,
-        MethodDef,
-        ProtocolDef,
-        bake_interface_skeleton,
-    )
-    _MODULE_AVAILABLE = True
-except ModuleNotFoundError:
-    try:
-        from sandbox.core.skeleton_baker import (
-            DataClassDef,
-            FieldDef,
-            InterfaceBundle,
-            MethodDef,
-            ProtocolDef,
-            bake_interface_skeleton,
-        )
-        _MODULE_AVAILABLE = True
-    except ModuleNotFoundError:
-        _MODULE_AVAILABLE = False
-        DataClassDef = None  # type: ignore[assignment]
-        FieldDef = None  # type: ignore[assignment]
-        InterfaceBundle = None  # type: ignore[assignment]
-        MethodDef = None  # type: ignore[assignment]
-        ProtocolDef = None  # type: ignore[assignment]
-        bake_interface_skeleton = None  # type: ignore[assignment]
+from core.skeleton_baker import (
+    DataClassDef,
+    FieldDef,
+    InterfaceBundle,
+    MethodDef,
+    ProtocolDef,
+    bake_interface_skeleton,
+)
+_MODULE_AVAILABLE = True
 
 
 

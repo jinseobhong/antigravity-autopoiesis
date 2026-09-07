@@ -18,22 +18,13 @@ import sys
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
-try:
-    from core.cortex_docs import (
-        StateRevision,
-        init_cortex_db,
-        resolve_cortex_db_path,
-        snapshot_state_ledger,
-    )
-    from core.cortex_knowledge import record_event
-except ModuleNotFoundError:
-    from sandbox.core.cortex_docs import (
-        StateRevision,
-        init_cortex_db,
-        resolve_cortex_db_path,
-        snapshot_state_ledger,
-    )
-    from sandbox.core.cortex_knowledge import record_event
+from core.cortex_docs import (
+    StateRevision,
+    init_cortex_db,
+    resolve_cortex_db_path,
+    snapshot_state_ledger,
+)
+from core.cortex_knowledge import record_event
 
 
 @dataclass(frozen=True)

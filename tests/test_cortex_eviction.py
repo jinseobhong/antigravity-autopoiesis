@@ -8,22 +8,13 @@ import time
 import tempfile
 import unittest
 
-try:
-    from core.cortex_docs import (
-        get_connection,
-        init_cortex_db,
-        trigger_architecture_eviction,
-        trigger_contract_eviction,
-        trigger_state_eviction,
-    )
-except ModuleNotFoundError:
-    from sandbox.core.cortex_docs import (
-        get_connection,
-        init_cortex_db,
-        trigger_architecture_eviction,
-        trigger_contract_eviction,
-        trigger_state_eviction,
-    )
+from core.cortex_docs import (
+    get_connection,
+    init_cortex_db,
+    trigger_architecture_eviction,
+    trigger_contract_eviction,
+    trigger_state_eviction,
+)
 
 
 class TestCortexEviction(unittest.TestCase):

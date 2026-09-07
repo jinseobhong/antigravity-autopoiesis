@@ -16,20 +16,12 @@ import sys
 import time
 from typing import Any, Callable, List, Optional, Sequence, Tuple
 
-try:
-    from core.interfaces.retry_policy_proto import (
-        BackoffConfig,
-        RetryAttempt,
-        RetryOutcome,
-        RetryPolicyProtocol,
-    )
-except ModuleNotFoundError:
-    from sandbox.core.interfaces.retry_policy_proto import (
-        BackoffConfig,
-        RetryAttempt,
-        RetryOutcome,
-        RetryPolicyProtocol,
-    )
+from core.interfaces.retry_policy_proto import (
+    BackoffConfig,
+    RetryAttempt,
+    RetryOutcome,
+    RetryPolicyProtocol,
+)
 
 
 class RetryPolicy(RetryPolicyProtocol):

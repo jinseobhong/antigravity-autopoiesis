@@ -23,60 +23,24 @@ import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
 import unittest
 
-try:
-    from core.interfaces.evolutionary_engine_proto import (
-        EvolutionConfig,
-        EvolutionOutcome,
-        EvolutionaryEngineProtocol,
-        FitnessEvaluatorProtocol,
-        GenerationReport,
-        MutantCandidate,
-    )
-    from core.evolutionary_engine import (
-        DEFAULT_SEED_CODE,
-        DefaultFitnessEvaluator,
-        EvolutionaryEngine,
-        FitnessEvaluator,
-        SubprocessFitnessEvaluator,
-        main,
-    )
-    from core.ast_docking_checker import verify_ast_docking
-    _MODULE_AVAILABLE = True
-except ModuleNotFoundError:
-    try:
-        from sandbox.core.interfaces.evolutionary_engine_proto import (
-            EvolutionConfig,
-            EvolutionOutcome,
-            EvolutionaryEngineProtocol,
-            FitnessEvaluatorProtocol,
-            GenerationReport,
-            MutantCandidate,
-        )
-        from sandbox.core.evolutionary_engine import (
-            DEFAULT_SEED_CODE,
-            DefaultFitnessEvaluator,
-            EvolutionaryEngine,
-            FitnessEvaluator,
-            SubprocessFitnessEvaluator,
-            main,
-        )
-        from sandbox.core.ast_docking_checker import verify_ast_docking
-        _MODULE_AVAILABLE = True
-    except ModuleNotFoundError:
-        _MODULE_AVAILABLE = False
-        EvolutionConfig = None  # type: ignore[assignment]
-        EvolutionOutcome = None  # type: ignore[assignment]
-        EvolutionaryEngineProtocol = None  # type: ignore[assignment]
-        FitnessEvaluatorProtocol = None  # type: ignore[assignment]
-        GenerationReport = None  # type: ignore[assignment]
-        MutantCandidate = None  # type: ignore[assignment]
-        DEFAULT_SEED_CODE = ""
-        DefaultFitnessEvaluator = None  # type: ignore[assignment]
-        EvolutionaryEngine = None  # type: ignore[assignment]
-        FitnessEvaluator = None  # type: ignore[assignment]
-        SubprocessFitnessEvaluator = None  # type: ignore[assignment]
-        main = None  # type: ignore[assignment]
-        verify_ast_docking = None  # type: ignore[assignment]
+from core.interfaces.evolutionary_engine_proto import (
+    EvolutionConfig,
+    EvolutionOutcome,
+    EvolutionaryEngineProtocol,
+    FitnessEvaluatorProtocol,
+    GenerationReport,
+    MutantCandidate,
+)
+from core.evolutionary_engine import (
+    DEFAULT_SEED_CODE,
+    DefaultFitnessEvaluator,
+    EvolutionaryEngine,
+    FitnessEvaluator,
+    SubprocessFitnessEvaluator,
+    main,
+)
+from core.ast_docking_checker import verify_ast_docking
+_MODULE_AVAILABLE = True
 
 
 

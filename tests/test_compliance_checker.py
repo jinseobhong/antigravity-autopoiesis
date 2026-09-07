@@ -8,22 +8,13 @@ import tempfile
 import unittest
 from unittest import mock
 
-try:
-    from sandbox.scripts.compliance_checker import (
-        CodeComplianceAuditor,
-        DocComplianceAuditor,
-        ComplianceDefect,
-        audit_file,
-        _collect_target_files,
-    )
-except ModuleNotFoundError:
-    from scripts.compliance_checker import (
-        CodeComplianceAuditor,
-        DocComplianceAuditor,
-        ComplianceDefect,
-        audit_file,
-        _collect_target_files,
-    )
+from scripts.compliance_checker import (
+    CodeComplianceAuditor,
+    DocComplianceAuditor,
+    ComplianceDefect,
+    audit_file,
+    _collect_target_files,
+)
 
 
 class TestCodeComplianceAuditor(unittest.TestCase):

@@ -23,13 +23,7 @@ for root in _CANDIDATE_ROOTS:
     if root not in sys.path:
         sys.path.insert(0, root)
 
-try:
-    from scripts.compliance_checker import ComplianceDefect, DocComplianceAuditor
-except ModuleNotFoundError:
-    try:
-        from sandbox.scripts.compliance_checker import ComplianceDefect, DocComplianceAuditor
-    except ModuleNotFoundError:
-        from compliance_checker import ComplianceDefect, DocComplianceAuditor
+from scripts.compliance_checker import ComplianceDefect, DocComplianceAuditor
 
 
 ALLOWED_STATUSES: Set[str] = {"DRAFT", "PROPOSED", "ACCEPTED", "ARCHIVED"}

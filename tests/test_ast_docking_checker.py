@@ -19,29 +19,13 @@ import tempfile
 from typing import List, Optional, Tuple
 import unittest
 
-try:
-    from core.ast_docking_checker import (
-        DockingDefect,
-        DockingReport,
-        MethodSignature,
-        verify_ast_docking,
-    )
-    _MODULE_AVAILABLE = True
-except ModuleNotFoundError:
-    try:
-        from sandbox.core.ast_docking_checker import (
-            DockingDefect,
-            DockingReport,
-            MethodSignature,
-            verify_ast_docking,
-        )
-        _MODULE_AVAILABLE = True
-    except ModuleNotFoundError:
-        _MODULE_AVAILABLE = False
-        DockingDefect = None  # type: ignore[assignment]
-        DockingReport = None  # type: ignore[assignment]
-        MethodSignature = None  # type: ignore[assignment]
-        verify_ast_docking = None  # type: ignore[assignment]
+from core.ast_docking_checker import (
+    DockingDefect,
+    DockingReport,
+    MethodSignature,
+    verify_ast_docking,
+)
+_MODULE_AVAILABLE = True
 
 
 

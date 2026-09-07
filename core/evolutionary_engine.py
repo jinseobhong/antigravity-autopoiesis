@@ -20,43 +20,23 @@ import sys
 import time
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
-try:
-    from core.interfaces.evolutionary_engine_proto import (
-        EvolutionConfig,
-        EvolutionOutcome,
-        EvolutionaryEngineProtocol,
-        FitnessEvaluatorProtocol,
-        GenerationReport,
-        MutantCandidate,
-    )
-except ModuleNotFoundError:
-    from sandbox.core.interfaces.evolutionary_engine_proto import (
-        EvolutionConfig,
-        EvolutionOutcome,
-        EvolutionaryEngineProtocol,
-        FitnessEvaluatorProtocol,
-        GenerationReport,
-        MutantCandidate,
-    )
+from core.interfaces.evolutionary_engine_proto import (
+    EvolutionConfig,
+    EvolutionOutcome,
+    EvolutionaryEngineProtocol,
+    FitnessEvaluatorProtocol,
+    GenerationReport,
+    MutantCandidate,
+)
 
-try:
-    from core.ast_docking_checker import (
-        _extract_impl_classes,
-        _extract_protocols,
-        _read_ast_tree,
-        _select_candidate_class,
-        _verify_single_protocol,
-        verify_ast_docking,
-    )
-except ModuleNotFoundError:
-    from sandbox.core.ast_docking_checker import (
-        _extract_impl_classes,
-        _extract_protocols,
-        _read_ast_tree,
-        _select_candidate_class,
-        _verify_single_protocol,
-        verify_ast_docking,
-    )
+from core.ast_docking_checker import (
+    _extract_impl_classes,
+    _extract_protocols,
+    _read_ast_tree,
+    _select_candidate_class,
+    _verify_single_protocol,
+    verify_ast_docking,
+)
 
 
 # ==============================================================================

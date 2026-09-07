@@ -7,18 +7,11 @@ import os
 import tempfile
 import unittest
 
-try:
-    from scripts.validate_doc_preapproval import (
-        DocPreapprovalLinter,
-        PreapprovalResult,
-        validate_document_preapproval,
-    )
-except ModuleNotFoundError:
-    from sandbox.scripts.validate_doc_preapproval import (
-        DocPreapprovalLinter,
-        PreapprovalResult,
-        validate_document_preapproval,
-    )
+from scripts.validate_doc_preapproval import (
+    DocPreapprovalLinter,
+    PreapprovalResult,
+    validate_document_preapproval,
+)
 
 
 class TestDocPreapprovalLinter(unittest.TestCase):

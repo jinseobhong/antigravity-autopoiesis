@@ -20,20 +20,12 @@ import sys
 import time
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-try:
-    from core.cortex_knowledge import (
-        DEFAULT_MEMORY_DB_PATH,
-        get_connection,
-        resolve_memory_db_path,
-        sanitize_fts_query,
-    )
-except ModuleNotFoundError:
-    from sandbox.core.cortex_knowledge import (
-        DEFAULT_MEMORY_DB_PATH,
-        get_connection,
-        resolve_memory_db_path,
-        sanitize_fts_query,
-    )
+from core.cortex_knowledge import (
+    DEFAULT_MEMORY_DB_PATH,
+    get_connection,
+    resolve_memory_db_path,
+    sanitize_fts_query,
+)
 
 
 # ==============================================================================

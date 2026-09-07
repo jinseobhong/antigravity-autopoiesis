@@ -25,22 +25,13 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-try:
-    from core.cortex_docs import init_cortex_db
-    from core.cortex_knowledge import (
-        export_memory_seed,
-        get_connection,
-        init_knowledge_tables,
-    )
-    from core.fs_topology import CanonicalPaths
-except ModuleNotFoundError:
-    from sandbox.core.cortex_docs import init_cortex_db
-    from sandbox.core.cortex_knowledge import (
-        export_memory_seed,
-        get_connection,
-        init_knowledge_tables,
-    )
-    from sandbox.core.fs_topology import CanonicalPaths
+from core.cortex_docs import init_cortex_db
+from core.cortex_knowledge import (
+    export_memory_seed,
+    get_connection,
+    init_knowledge_tables,
+)
+from core.fs_topology import CanonicalPaths
 
 
 @dataclass(frozen=True)

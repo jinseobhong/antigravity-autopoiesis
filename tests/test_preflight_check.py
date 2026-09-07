@@ -15,28 +15,16 @@ from typing import List, Tuple
 import unittest
 from unittest import mock
 
-try:
-    from scripts.preflight_check import (
-        PreflightReport,
-        _run_compliance_gate,
-        _run_topology_gate,
-        _run_test_suite_gate,
-        run_preflight,
-        _render_text_report,
-        build_parser,
-        main,
-    )
-except ModuleNotFoundError:
-    from sandbox.scripts.preflight_check import (
-        PreflightReport,
-        _run_compliance_gate,
-        _run_topology_gate,
-        _run_test_suite_gate,
-        run_preflight,
-        _render_text_report,
-        build_parser,
-        main,
-    )
+from scripts.preflight_check import (
+    PreflightReport,
+    _run_compliance_gate,
+    _run_topology_gate,
+    _run_test_suite_gate,
+    run_preflight,
+    _render_text_report,
+    build_parser,
+    main,
+)
 
 
 class TestPreflightReport(unittest.TestCase):

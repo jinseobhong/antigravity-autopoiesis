@@ -13,54 +13,29 @@ from pathlib import Path
 import sys
 from typing import Callable, Dict, List, Optional
 
-try:
-    from core.cortex_docs import (
-        get_connection,
-        init_cortex_db,
-        restore_archive,
-        trigger_architecture_eviction,
-        trigger_contract_eviction,
-        trigger_state_eviction,
-    )
-    from core.cortex_knowledge import (
-        export_memory_seed,
-        get_cortex_stats,
-        get_grounding_directives,
-        hydrate_memory_from_seed,
-        init_knowledge_tables,
-        list_parked_tasks,
-        park_task,
-        query_events,
-        record_event,
-        resolve_memory_db_path,
-        unpark_task,
-        vacuum_decay,
-    )
-    from core.state_compactor import compact_state_ledger
-except ModuleNotFoundError:
-    from sandbox.core.cortex_docs import (
-        get_connection,
-        init_cortex_db,
-        restore_archive,
-        trigger_architecture_eviction,
-        trigger_contract_eviction,
-        trigger_state_eviction,
-    )
-    from sandbox.core.cortex_knowledge import (
-        export_memory_seed,
-        get_cortex_stats,
-        get_grounding_directives,
-        hydrate_memory_from_seed,
-        init_knowledge_tables,
-        list_parked_tasks,
-        park_task,
-        query_events,
-        record_event,
-        resolve_memory_db_path,
-        unpark_task,
-        vacuum_decay,
-    )
-    from sandbox.core.state_compactor import compact_state_ledger
+from core.cortex_docs import (
+    get_connection,
+    init_cortex_db,
+    restore_archive,
+    trigger_architecture_eviction,
+    trigger_contract_eviction,
+    trigger_state_eviction,
+)
+from core.cortex_knowledge import (
+    export_memory_seed,
+    get_cortex_stats,
+    get_grounding_directives,
+    hydrate_memory_from_seed,
+    init_knowledge_tables,
+    list_parked_tasks,
+    park_task,
+    query_events,
+    record_event,
+    resolve_memory_db_path,
+    unpark_task,
+    vacuum_decay,
+)
+from core.state_compactor import compact_state_ledger
 
 
 def build_parser() -> argparse.ArgumentParser:

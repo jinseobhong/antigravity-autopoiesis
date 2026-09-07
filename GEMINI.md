@@ -126,15 +126,16 @@ python scripts/preflight_check.py --quick
 
 ---
 
-## 3. Sandbox Confinement & State Ledger Lifecycle (MUST)
+## 3. Git Working Tree Governance & State Ledger Lifecycle (MUST)
 
-### 3.1 Sandbox Isolation Boundary
-- All implementation drafts, candidate modifications, and experimental test suites must be written and executed inside `./sandbox/`.
-- **Zero Direct Root Mutation**: Direct mutation or file creation within the production root (`.`) is strictly prohibited during active development.
+### 3.1 Git Working Tree Isolation & Atomic Rollback Invariant
+- Implementation and refactoring occur directly within the Git working tree under sovereign authoring posture. Physical `./sandbox/` subdirectories are abolished as redundant bureaucracy.
+- **Atomic Rollback Invariant**: If preflight verification gates fail or unexpected regressions occur, the orchestrator SHALL immediately revert the working tree via `git checkout -- . && git clean -fd`.
+- **Mechanical Preflight Enforcement**: Modifications SHALL NOT be committed until 100% of preflight gates clear (`python scripts/preflight_check.py --full`). The Stop Hook (`scripts/guard_configuration_baseline.py`) mechanically enforces full verification pass before turn termination.
 
 ### 3.2 State Ledger Boundary & Atomic Concurrency (`docs/active/CURRENT_STATE.md`)
 - The state ledger (`docs/active/CURRENT_STATE.md`) is the single source of truth for sprint task progression.
-- **Ledger Exemption & Atomic Writes**: The state ledger is explicitly exempt from the root-confinement ban, but must be updated exclusively via atomic file transactions (write to temp file + atomic rename) or via the dedicated state CLI:
+- **Ledger Atomic Writes**: Updates to `CURRENT_STATE.md` must execute atomically via file transactions or dedicated state CLI:
   ```bash
   # docs/active/CURRENT_STATE.md is updated atomically via file transaction
   ```

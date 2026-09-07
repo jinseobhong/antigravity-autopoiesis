@@ -27,12 +27,8 @@ for root in _CANDIDATE_ROOTS:
     if root not in sys.path:
         sys.path.insert(0, root)
 
-try:
-    from scripts.compliance_checker import audit_file, _collect_target_files
-    from core.fs_topology import audit_filesystem_topology
-except ModuleNotFoundError:
-    from sandbox.scripts.compliance_checker import audit_file, _collect_target_files
-    from sandbox.core.fs_topology import audit_filesystem_topology
+from scripts.compliance_checker import audit_file, _collect_target_files
+from core.fs_topology import audit_filesystem_topology
 
 
 @dataclass(frozen=True)

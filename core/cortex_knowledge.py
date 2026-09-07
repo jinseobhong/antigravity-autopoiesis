@@ -19,30 +19,17 @@ import sqlite3
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
-try:
-    from core.cortex_docs import (
-        DEFAULT_SPOOL_PATH,
-        get_connection,
-        _spool_record,
-    )
-    from core.fs_topology import (
-        CanonicalPaths,
-        resolve_memory_db_path,
-        resolve_document_db_path,
-        resolve_cortex_db_path,
-    )
-except ModuleNotFoundError:
-    from sandbox.core.cortex_docs import (
-        DEFAULT_SPOOL_PATH,
-        get_connection,
-        _spool_record,
-    )
-    from sandbox.core.fs_topology import (
-        CanonicalPaths,
-        resolve_memory_db_path,
-        resolve_document_db_path,
-        resolve_cortex_db_path,
-    )
+from core.cortex_docs import (
+    DEFAULT_SPOOL_PATH,
+    get_connection,
+    _spool_record,
+)
+from core.fs_topology import (
+    CanonicalPaths,
+    resolve_memory_db_path,
+    resolve_document_db_path,
+    resolve_cortex_db_path,
+)
 
 DEFAULT_MEMORY_DB_PATH: Path = CanonicalPaths.DATA_MEMORY_DB
 DEFAULT_MEMORY_SEED_PATH: Path = CanonicalPaths.DATA_MEMORY_SEED

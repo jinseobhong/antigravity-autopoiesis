@@ -16,7 +16,7 @@ dependencies:
 > ### Document Scope & Governance Authority
 > This specification functions as the authoritative runtime ledger and sprint compass for Project Autopoiesis.
 > - **Operational Standard**: Binding specification under the Antigravity Engineering Constitution (`GEMINI.md`).
-> - **Automated Compliance Auditor**: `python scripts/compliance_checker.py sandbox/docs/active/CURRENT_STATE.md`
+> - **Automated Compliance Auditor**: `python scripts/compliance_checker.py docs/active/CURRENT_STATE.md`
 > - **Concurrency Mandate**: Updates to state records MUST execute via atomic file rename operations or dedicated state management tooling.
 
 ---
@@ -158,6 +158,7 @@ flowchart TD
         PRM_136["TASK-036: State Ledger Rolling Compactor, Cortex Snapshot Engine & Stop Hook Compaction Guard (v1.0)"]
         PRM_137["TASK-037: Memory-Document Physical Split and Seed Hydration Pipeline (v1.0)"]
         PRM_139["TASK-039: Stop Hook Preflight Verification Hardening & Fast/Full Calibration (v1.0)"]
+        PRM_140["TASK-040: Physical Sandbox Purge, Zombie Dead Code Elimination & Git-Native Unification (v1.0)"]
     end
 
     ColPlanned -->|"Assign Available Slot"| ColActive
@@ -177,6 +178,7 @@ flowchart TD
 | **`TASK-036`** | State Ledger Rolling Compactor, Cortex Snapshot Engine & Stop Hook Compaction Guard | `PROMOTED` | 0/2 | Tier 2 (Code) | Sovereign Architect | 11 compactor tests pass (0.26s); 56 baseline tests pass; Snapshot in document.db; Clean AST; Compaction verified. |
 | **`TASK-037`** | Memory-Document Physical Split and Seed Hydration Pipeline | `PROMOTED` | 0/2 | Tier 2 (Code) | Sovereign Architect | 9 companion tests pass (1.20s); 320 full tests pass; 100% SHA-256 parity; Seed auto-hydration verified (<50ms). |
 | **`TASK-039`** | Stop Hook Preflight Verification Hardening & Fast/Full Calibration | `PROMOTED` | 0/2 | Tier 2 (Code) | Sovereign Architect | 63 companion tests pass (2.46s); 329 full tests pass; Clean AST; Preflight Stop Guard verified. |
+| **`TASK-040`** | Physical Sandbox Purge, Zombie Dead Code Elimination & Git-Native Unification | `PROMOTED` | 0/2 | Tier 3 (Governance) | Sovereign Architect | Purged 1,500+ lines zombie runners; Removed sandbox import fallbacks across 24 files; Abolished physical sandbox in GEMINI.md; 329 tests pass; Full preflight verified. |
 
 ---
 
@@ -199,8 +201,8 @@ System performance boundaries are defined by contiguous, non-overlapping ASCII i
 Technical directives and system invariants are defined below conforming to NASA SP-2016-6105 Rev 2.
 
 ### 5.1 Architectural and Lifecycle Directives
-- `[REQ-STATE-01]` The orchestrating agent SHALL maintain sandbox isolation during active development.
-- `[REQ-STATE-02]` The orchestrating agent SHALL NOT write unverified source code directly into the production root.
+- `[REQ-STATE-01]` The orchestrating agent SHALL maintain git working tree isolation during active development.
+- `[REQ-STATE-02]` The orchestrating agent SHALL NOT commit unverified source code directly into trunk without preflight verification.
 - `[REQ-STATE-03]` The state ledger SHALL maintain a concurrency ceiling of at most 5 active tasks.
 - `[REQ-STATE-04]` When 5 tasks are active, incoming tasks SHALL receive PARKED status.
 - `[REQ-STATE-05]` Every state transition in the task ledger SHALL be accompanied by an evidentiary artifact.
@@ -360,7 +362,7 @@ Every modification to this document MUST pass the automated compliance checker p
 
 ```bash
 # Quantitative Compliance Audit
-python scripts/compliance_checker.py sandbox/docs/active/CURRENT_STATE.md
+python scripts/compliance_checker.py docs/active/CURRENT_STATE.md
 # Expected Exit Code: 0
 ```
 
