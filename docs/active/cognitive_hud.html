@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Autopoiesis 4-Layer Cognitive HUD</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+</head>
+<body class="bg-transparent text-[var(--foreground)] antialiased p-3">
+  <div class="bg-[var(--card)] text-[var(--foreground)] border border-[var(--border)] rounded-xl p-4 shadow-sm max-w-2xl mx-auto space-y-4">
+    <!-- Header -->
+    <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
+      <div>
+        <h2 class="text-base font-bold tracking-tight text-[var(--foreground)]">4-Layer Cognitive HUD</h2>
+        <p class="text-xs text-[var(--muted-foreground)]">Project Autopoiesis Autonomous Architecture HUD</p>
+      </div>
+      <div class="text-right">
+        <span class="text-[10px] font-mono text-[var(--muted-foreground)]">2026-09-07T10:51:00</span>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="flex border-b border-[var(--border)] gap-1 text-xs font-medium">
+      <button onclick="selectTab('l0')" id="tab-l0" class="tab-btn px-3 py-1.5 border-b-2 border-indigo-500 text-indigo-400 font-semibold">L0 Cockpit</button>
+      <button onclick="selectTab('l1')" id="tab-l1" class="tab-btn px-3 py-1.5 border-b-2 border-transparent text-[var(--muted-foreground)]">L1 Tension</button>
+      <button onclick="selectTab('l2')" id="tab-l2" class="tab-btn px-3 py-1.5 border-b-2 border-transparent text-[var(--muted-foreground)]">L2 Mutations</button>
+      <button onclick="selectTab('l3')" id="tab-l3" class="tab-btn px-3 py-1.5 border-b-2 border-transparent text-[var(--muted-foreground)]">L3 Genotype</button>
+    </div>
+
+    <!-- Content Layers -->
+    
+    <div id="layer-l0" class="layer-panel space-y-4">
+      <div class="flex items-center justify-between p-3 rounded-lg border border-[var(--border)] bg-[var(--content)]">
+        <div>
+          <div class="text-xs uppercase tracking-wider text-[var(--muted-foreground)]">System Viability</div>
+          <div class="text-xl font-bold tracking-tight text-[var(--foreground)]">DEGRADED</div>
+        </div>
+        <span class="px-3 py-1 text-xs font-semibold rounded-full border bg-amber-500/10 text-amber-500 border-amber-500/30">DEGRADED</span>
+      </div>
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div class="p-3 rounded-lg border border-[var(--border)] bg-[var(--content)]">
+          <div class="text-xs text-[var(--muted-foreground)]">Active Tasks</div>
+          <div class="text-lg font-semibold text-[var(--foreground)]">0/5</div>
+        </div>
+        <div class="p-3 rounded-lg border border-[var(--border)] bg-[var(--content)]">
+          <div class="text-xs text-[var(--muted-foreground)]">Working Tree</div>
+          <div class="text-lg font-semibold text-amber-400">Uncommitted</div>
+        </div>
+        <div class="p-3 rounded-lg border border-[var(--border)] bg-[var(--content)]">
+          <div class="text-xs text-[var(--muted-foreground)]">Stop Hook Guard</div>
+          <div class="text-lg font-semibold text-amber-400">Intercepting</div>
+        </div>
+        <div class="p-3 rounded-lg border border-[var(--border)] bg-[var(--content)]">
+          <div class="text-xs text-[var(--muted-foreground)]">Last Commit</div>
+          <div class="text-lg font-semibold font-mono text-[var(--foreground)]">e6cb27b</div>
+        </div>
+      </div>
+      <div class="p-3 rounded-lg border border-[var(--border)] bg-[var(--content)] text-xs">
+        <span class="font-medium text-[var(--foreground)]">Commit Subject:</span> refactor(core): purge zombie runners, abolish physical sandbox, and unify under git working tree (TASK-040)
+      </div>
+    </div>
+    
+    
+    <div id="layer-l1" class="layer-panel hidden space-y-4">
+      <div class="p-4 rounded-lg border border-[var(--border)] bg-[var(--content)] space-y-3">
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-[var(--foreground)] font-medium">Simplicity vs Extensibility (KISS Balance)</span>
+          <span class="text-[var(--muted-foreground)] font-mono">88%</span>
+        </div>
+        <div class="w-full bg-[var(--border)] rounded-full h-2 overflow-hidden">
+          <div class="bg-indigo-500 h-2 rounded-full" style="width: 88%"></div>
+        </div>
+
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-[var(--foreground)] font-medium">Latency SLA vs Storage (Fast-Path Balance)</span>
+          <span class="text-[var(--muted-foreground)] font-mono">92%</span>
+        </div>
+        <div class="w-full bg-[var(--border)] rounded-full h-2 overflow-hidden">
+          <div class="bg-emerald-500 h-2 rounded-full" style="width: 92%"></div>
+        </div>
+
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-[var(--foreground)] font-medium">Mutation Rigor vs Zero Regression</span>
+          <span class="text-[var(--muted-foreground)] font-mono">96%</span>
+        </div>
+        <div class="w-full bg-[var(--border)] rounded-full h-2 overflow-hidden">
+          <div class="bg-cyan-500 h-2 rounded-full" style="width: 96%"></div>
+        </div>
+      </div>
+      <div class="p-3 rounded-lg border border-[var(--border)] bg-[var(--content)] flex justify-between items-center">
+        <span class="text-xs text-[var(--muted-foreground)]">Operator Cognitive Friction Score (1-10):</span>
+        <span class="px-2.5 py-0.5 text-xs font-bold rounded bg-emerald-500/20 text-emerald-400">
+          2 / 10 (Optimal)
+        </span>
+      </div>
+    </div>
+    
+    
+    <div id="layer-l2" class="layer-panel hidden space-y-3">
+      
+        <div class="p-3 rounded-lg border border-[var(--border)] bg-[var(--content)] space-y-2">
+          <div class="flex justify-between items-center border-b border-[var(--border)] pb-1.5">
+            <span class="font-bold text-xs font-mono text-[var(--foreground)]">TASK-041</span>
+            <span class="text-[10px] uppercase text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">Promoted</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <div class="p-2 rounded bg-[var(--card)] border border-[var(--border)]">
+              <span class="font-semibold text-indigo-400">Q1 Leap:</span>
+              <p class="text-[var(--muted-foreground)] mt-0.5">Interactive 4-Layer Cognitive HUD Generative UI with theme adaptation.</p>
+            </div>
+            <div class="p-2 rounded bg-[var(--card)] border border-[var(--border)]">
+              <span class="font-semibold text-emerald-400">Q2 Fitness:</span>
+              <p class="text-[var(--muted-foreground)] mt-0.5">Sub-150ms snapshot generation; 0 CSP violations; 100% theme variable parity.</p>
+            </div>
+            <div class="p-2 rounded bg-[var(--card)] border border-[var(--border)]">
+              <span class="font-semibold text-amber-400">Q3 Tension:</span>
+              <p class="text-[var(--muted-foreground)] mt-0.5">Requires modern browser rendering; CSS custom property dependency.</p>
+            </div>
+            <div class="p-2 rounded bg-[var(--card)] border border-[var(--border)]">
+              <span class="font-semibold text-rose-400">Q4 Rollback:</span>
+              <code class="block font-mono text-[10px] text-[var(--foreground)] bg-black/20 p-1 rounded mt-0.5">
+                git checkout -- core/cognitive_hud.py core/interfaces/cognitive_hud_proto.py
+              </code>
+            </div>
+          </div>
+        </div>
+        
+        <div class="p-3 rounded-lg border border-[var(--border)] bg-[var(--content)] space-y-2">
+          <div class="flex justify-between items-center border-b border-[var(--border)] pb-1.5">
+            <span class="font-bold text-xs font-mono text-[var(--foreground)]">TASK-040</span>
+            <span class="text-[10px] uppercase text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">Promoted</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <div class="p-2 rounded bg-[var(--card)] border border-[var(--border)]">
+              <span class="font-semibold text-indigo-400">Q1 Leap:</span>
+              <p class="text-[var(--muted-foreground)] mt-0.5">Purged zombie runners and abolished physical sandbox; unified under Git tree.</p>
+            </div>
+            <div class="p-2 rounded bg-[var(--card)] border border-[var(--border)]">
+              <span class="font-semibold text-emerald-400">Q2 Fitness:</span>
+              <p class="text-[var(--muted-foreground)] mt-0.5">-2,061 lines dead code excised; 329 tests passed in 9.17s; 0 regressions.</p>
+            </div>
+            <div class="p-2 rounded bg-[var(--card)] border border-[var(--border)]">
+              <span class="font-semibold text-amber-400">Q3 Tension:</span>
+              <p class="text-[var(--muted-foreground)] mt-0.5">Requires disciplined git status inspection prior to turn completion.</p>
+            </div>
+            <div class="p-2 rounded bg-[var(--card)] border border-[var(--border)]">
+              <span class="font-semibold text-rose-400">Q4 Rollback:</span>
+              <code class="block font-mono text-[10px] text-[var(--foreground)] bg-black/20 p-1 rounded mt-0.5">
+                git revert e6cb27b
+              </code>
+            </div>
+          </div>
+        </div>
+        
+        <div class="p-3 rounded-lg border border-[var(--border)] bg-[var(--content)] space-y-2">
+          <div class="flex justify-between items-center border-b border-[var(--border)] pb-1.5">
+            <span class="font-bold text-xs font-mono text-[var(--foreground)]">TASK-039</span>
+            <span class="text-[10px] uppercase text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">Promoted</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <div class="p-2 rounded bg-[var(--card)] border border-[var(--border)]">
+              <span class="font-semibold text-indigo-400">Q1 Leap:</span>
+              <p class="text-[var(--muted-foreground)] mt-0.5">Stop Hook mechanical preflight verification gate on turn termination.</p>
+            </div>
+            <div class="p-2 rounded bg-[var(--card)] border border-[var(--border)]">
+              <span class="font-semibold text-emerald-400">Q2 Fitness:</span>
+              <p class="text-[var(--muted-foreground)] mt-0.5">Zero unverified commits escape; 63 companion tests passing.</p>
+            </div>
+            <div class="p-2 rounded bg-[var(--card)] border border-[var(--border)]">
+              <span class="font-semibold text-amber-400">Q3 Tension:</span>
+              <p class="text-[var(--muted-foreground)] mt-0.5">Adds 9s verification tax when stopping on clean idle state.</p>
+            </div>
+            <div class="p-2 rounded bg-[var(--card)] border border-[var(--border)]">
+              <span class="font-semibold text-rose-400">Q4 Rollback:</span>
+              <code class="block font-mono text-[10px] text-[var(--foreground)] bg-black/20 p-1 rounded mt-0.5">
+                git revert 38b6edb
+              </code>
+            </div>
+          </div>
+        </div>
+        
+    </div>
+    
+    
+    <div id="layer-l3" class="layer-panel hidden space-y-3">
+      <div class="grid grid-cols-3 gap-2 text-center text-xs">
+        <div class="p-2.5 rounded-lg border border-[var(--border)] bg-[var(--content)]">
+          <div class="text-[var(--muted-foreground)]">Tests Passed</div>
+          <div class="text-base font-bold text-emerald-400">329</div>
+        </div>
+        <div class="p-2.5 rounded-lg border border-[var(--border)] bg-[var(--content)]">
+          <div class="text-[var(--muted-foreground)]">AST Defects</div>
+          <div class="text-base font-bold text-emerald-400">0</div>
+        </div>
+        <div class="p-2.5 rounded-lg border border-[var(--border)] bg-[var(--content)]">
+          <div class="text-[var(--muted-foreground)]">Docking Defects</div>
+          <div class="text-base font-bold text-emerald-400">0</div>
+        </div>
+      </div>
+      <div class="p-3 rounded-lg border border-[var(--border)] bg-[var(--content)]">
+        <div class="text-xs font-semibold text-[var(--foreground)] mb-1">Git Diff Stat & Line Changes</div>
+        <pre class="font-mono text-[11px] p-2.5 rounded bg-black/30 overflow-x-auto whitespace-pre">
+GEMINI.md                                          |  11 +-
+ core/__init__.py                                   |  48 +-
+ core/agent_runner.py                               | 754 ---------------------
+ core/cortex.py                                     |  71 +-
+ core/cortex_knowledge.py                           |  35 +-
+ core/dialectical_extractor.py                      |  22 +-
+ core/evolutionary_engine.py                        |  54 +-
+ core/retry_policy.py                               |  20 +-
+ core/shadow_grounding.py                           |  20 +-
+ core/state_compactor.py                            |  23 +-
+ core/test_engine/__init__.py                       |  24 -
+ core/test_engine/contracts.py                      | 108 ---
+ core/test_engine/engine.py                         | 246 -------
+ core/test_engine/worker.py                         | 148 ----
+ core/warm_runner.py                                | 125 ----
+ core/warm_runner_types.py                          |  20 -
+ core/warm_runner_worker.py                         |  17 -
+ docs/active/CURRENT_STATE.md                       |  10 +-
+ .../validate_doc_preapproval.cpython-312.pyc       | Bin 11150 -&gt; 10879 bytes
+ scripts/guard_configuration_baseline.py            |   7 +-
+ scripts/migrate_memory_document_split.py           |  23 +-
+ scripts/preflight_check.py                         |   8 +-
+ scripts/validate_doc_preapproval.py                |   8 +-
+ .../test_compliance_checker.cpython-312.pyc        | Bin 18123 -&gt; 17964 bytes
+ .../test_validate_doc_preapproval.cpython-312.pyc  | Bin 5212 -&gt; 5055 bytes
+ tests/test_ast_docking_checker.py                  |  30 +-
+ tests/test_compliance_checker.py                   |  23 +-
+ tests/test_cortex_concurrency.py                   |   8 +-
+ tests/test_cortex_docs.py                          |  20 +-
+ tests/test_cortex_eviction.py                      |  23 +-
+ tests/test_cortex_knowledge.py                     |  66 +-
+ tests/test_cortex_restore.py                       |  23 +-
+ tests/test_evolutionary_engine.py                  |  72 +-
+ tests/test_guard_configuration_baseline.py         |  68 +-
+ tests/test_guard_ivv_pipeline.py                   |   6 +-
+ tests/test_preflight_check.py                      |  32 +-
+ tests/test_retry_policy.py                         |  48 +-
+ tests/test_skeleton_baker.py                       |  38 +-
+ tests/test_state_compactor.py                      |  32 +-
+ tests/test_validate_doc_preapproval.py             |  17 +-
+ 40 files changed, 247 insertions(+), 2061 deletions(-)</pre>
+      </div>
+      <div class="text-[11px] text-[var(--muted-foreground)] text-right font-mono">
+        Status: All quality gates cleared; 329 tests passed.
+      </div>
+    </div>
+    
+  </div>
+
+  <script>
+    function selectTab(layerId) {
+      document.querySelectorAll('.layer-panel').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(el => {
+        el.classList.remove('border-indigo-500', 'text-indigo-400', 'font-semibold');
+        el.classList.add('border-transparent', 'text-[var(--muted-foreground)]');
+      });
+      const targetPanel = document.getElementById('layer-' + layerId);
+      if (targetPanel) targetPanel.classList.remove('hidden');
+      const targetTab = document.getElementById('tab-' + layerId);
+      if (targetTab) {
+        targetTab.classList.remove('border-transparent', 'text-[var(--muted-foreground)]');
+        targetTab.classList.add('border-indigo-500', 'text-indigo-400', 'font-semibold');
+      }
+    }
+  </script>
+</body>
+</html>
