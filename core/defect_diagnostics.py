@@ -301,6 +301,8 @@ def ingest_preflight_defects(
     recorded_count = 0
 
     for defect in parsed_diagnostics:
+        if not is_substantive_directive(defect.directive, defect.root_cause):
+            continue
         try:
             record_event(
                 outcome="FAILURE",
@@ -316,6 +318,26 @@ def ingest_preflight_defects(
             sys.stderr.write(f"[WARNING] Ingesting defect telemetry failed: {exc}\n")
 
     return recorded_count
+
+
+def is_substantive_directive(
+    directive: Optional[str], root_cause: Optional[str] = None
+) -> bool:
+    """Evaluates whether a directive contains actionable, non-boilerplate guidance."""
+    if not directive or len(directive.strip()) < 15:
+        return False
+    clean = directive.strip().lower()
+    banned_prefixes = (
+        "investigate preflight check output",
+        "all verification gates cleared",
+        "verified resolution",
+        "quality gate cleared",
+        "resolve regression in 'test_",
+    )
+    for pfx in banned_prefixes:
+        if clean.startswith(pfx):
+            return False
+    return True
 
 
 def _is_boilerplate_note(note: str) -> bool:
