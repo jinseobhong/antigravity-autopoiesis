@@ -32,6 +32,13 @@ ARCHITECTURE_SYNC_DIRECTIVE_MESSAGE = (
     "physical architecture changes in docs/active/ARCHITECTURE.md before concluding."
 )
 
+STATE_COMPACTION_DIRECTIVE_MESSAGE = (
+    "[STATE COMPACTION REQUIRED] docs/active/CURRENT_STATE.md contains {count} "
+    "promoted tasks (threshold: {threshold}). "
+    "Mandatory Compaction Invariant: You MUST compact the state ledger "
+    "(python -m core.cortex compact-ledger) and snapshot to cortex.db before concluding."
+)
+
 EPHEMERAL_PATTERNS: Tuple[str, ...] = (
     ".tmp",
     "__pycache__",
@@ -187,10 +194,40 @@ def check_architecture_sync(
     return True, None
 
 
+def check_state_compaction(
+    ledger_path: Path,
+    threshold: int = 10,
+) -> Tuple[bool, Optional[str]]:
+    """
+    Evaluates whether CURRENT_STATE.md has accumulated >= threshold promoted tasks.
+    Returns (is_compact, directive_explanation_if_uncompacted).
+    """
+    if not ledger_path.exists() or not ledger_path.is_file():
+        return True, None
+
+    try:
+        content = ledger_path.read_text(encoding="utf-8")
+    except OSError:
+        return True, None
+
+    prm_matches = re.findall(r'PRM_\w+\["([^"]+)"\]', content)
+    promoted_kanban = [m for m in prm_matches if not m.startswith("TASK-001..")]
+    table_pattern = r"[|]\s*\*\*`?[A-Za-z0-9_-]+`?\*\*\s*[|][^|]+[|]\s*`?PROMOTED`?\s*[|]"
+    promoted_table = re.findall(table_pattern, content)
+    effective_count = max(len(promoted_kanban), len(promoted_table))
+
+    if effective_count >= threshold:
+        msg = STATE_COMPACTION_DIRECTIVE_MESSAGE.format(count=effective_count, threshold=threshold)
+        return False, msg
+
+    return True, None
+
+
 def evaluate_baseline(
     repo_root: Path,
     ledger_path: Optional[Path] = None,
     uncommitted_override: Optional[Tuple[str, ...]] = None,
+    compaction_threshold: int = 10,
 ) -> ConfigurationBaselineReport:
     """Evaluates git working tree and CURRENT_STATE.md to determine hook decision."""
     effective_ledger = ledger_path or (repo_root / "docs" / "active" / "CURRENT_STATE.md")
@@ -211,6 +248,16 @@ def evaluate_baseline(
             is_git_clean=is_clean,
             decision="continue",
             explanation=arch_msg,
+        )
+
+    is_compact, compact_msg = check_state_compaction(effective_ledger, threshold=compaction_threshold)
+    if not is_compact:
+        return ConfigurationBaselineReport(
+            active_tasks=active_tasks,
+            uncommitted_files=uncommitted,
+            is_git_clean=is_clean,
+            decision="continue",
+            explanation=compact_msg,
         )
 
     if has_active or is_clean:

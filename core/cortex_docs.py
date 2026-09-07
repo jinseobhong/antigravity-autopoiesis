@@ -441,6 +441,72 @@ def trigger_state_eviction(
     )
 
 
+def snapshot_state_ledger(
+    ledger_path: Path,
+    db_path: Optional[Path] = None,
+    trigger: str = "State ledger rolling compaction",
+) -> StateRevision:
+    """
+    Persists an immutable snapshot of CURRENT_STATE.md into state_revisions and fts_archive_search.
+    """
+    target_db = init_cortex_db(db_path)
+    content = Path(ledger_path).read_text(encoding="utf-8")
+    meta = parse_frontmatter(content)
+    content_hash = compute_sha256(content)
+    now_ms = int(time.time() * 1000)
+    rev_id = f"REV-STATE-{now_ms}-{Path(ledger_path).stem}"
+    state_id = meta.get("id", Path(ledger_path).stem)
+    sprint_label = meta.get("sprint_horizon", meta.get("title", "Sprint-Active"))
+    active_count = content.count("IN_PROGRESS")
+
+    sql = """
+        INSERT INTO state_revisions (
+            revision_id, state_id, sprint_label, active_tasks_count,
+            content_hash, raw_content, frontmatter_json, transition_trigger
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+    """
+    params = (
+        rev_id,
+        state_id,
+        sprint_label,
+        active_count,
+        content_hash,
+        content,
+        json.dumps(meta, ensure_ascii=False),
+        trigger,
+    )
+    spool_data = {
+        "table": "state_revisions",
+        "rev_id": rev_id,
+        "entity_id": state_id,
+        "content_hash": content_hash,
+    }
+
+    _execute_with_retry(target_db, "insert_state", sql, params, spool_data)
+    fts_sql = "INSERT INTO fts_archive_search (domain_type, entity_id, title, raw_content) VALUES (?, ?, ?, ?);"
+    _execute_with_retry(
+        target_db,
+        "fts_sync",
+        fts_sql,
+        ("state", state_id, sprint_label, content),
+        spool_data,
+    )
+
+    now_str = time.strftime("%Y-%m-%d %H:%M:%S")
+    return StateRevision(
+        revision_id=rev_id,
+        state_id=state_id,
+        sprint_label=sprint_label,
+        active_tasks_count=active_count,
+        content_hash=content_hash,
+        raw_content=content,
+        frontmatter=meta,
+        transition_trigger=trigger,
+        created_at=now_str,
+        archived_at=now_str,
+    )
+
+
 def trigger_architecture_eviction(
     arch_dir: Path,
     capacity: int = 5,

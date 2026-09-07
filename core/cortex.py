@@ -31,6 +31,7 @@ try:
         unpark_task,
         vacuum_decay,
     )
+    from core.state_compactor import compact_state_ledger
 except ModuleNotFoundError:
     from sandbox.core.cortex_docs import (
         init_cortex_db,
@@ -49,6 +50,7 @@ except ModuleNotFoundError:
         unpark_task,
         vacuum_decay,
     )
+    from sandbox.core.state_compactor import compact_state_ledger
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -148,6 +150,16 @@ def build_parser() -> argparse.ArgumentParser:
     # init
     p_init = subparsers.add_parser("init", help="Initialize cortex.db tables and indexes")
     p_init.add_argument("--db", type=str, default=None, help="Custom cortex.db path")
+
+    # compact-ledger
+    p_compact = subparsers.add_parser("compact-ledger", help="Compact state ledger and snapshot to cortex")
+    p_compact.add_argument("--ledger", type=str, default="docs/active/CURRENT_STATE.md", help="Path to state ledger")
+    p_compact.add_argument("--threshold", type=int, default=10, help="Compaction threshold (default: 10)")
+    p_compact.add_argument("--keep", type=int, default=5, help="Recent tasks to keep (default: 5)")
+    p_compact.add_argument("--archive-dir", type=str, default="docs/archived", help="Archive directory")
+    p_compact.add_argument("--force", action="store_true", help="Force compaction regardless of count")
+    p_compact.add_argument("--json", action="store_true", help="Output compaction report JSON")
+    p_compact.add_argument("--db", type=str, default=None, help="Custom cortex.db path")
 
     return parser
 
@@ -319,6 +331,29 @@ def _handle_restore(args: argparse.Namespace, db_path: Optional[Path]) -> int:
     return 0 if res.verified else 1
 
 
+def _handle_compact_ledger(args: argparse.Namespace, db_path: Optional[Path]) -> int:
+    """Handles state ledger compaction subcommand."""
+    res = compact_state_ledger(
+        ledger_path=Path(args.ledger),
+        archive_dir=Path(args.archive_dir),
+        threshold=args.threshold,
+        keep_recent=args.keep,
+        db_path=db_path,
+        force=args.force,
+    )
+    if args.json:
+        sys.stdout.write(json.dumps(res.to_dict(), ensure_ascii=False, indent=2) + "\n")
+        return 0
+    if res.compacted:
+        sys.stdout.write(
+            f"STATE_COMPACTED: {res.pruned_count} task(s) archived to {res.archive_path} "
+            f"(Snapshot: {res.snapshot_id})\n"
+        )
+    else:
+        sys.stdout.write(f"STATE_SKIPPED: {res.explanation}\n")
+    return 0
+
+
 COMMAND_HANDLERS: Dict[str, Callable[[argparse.Namespace, Optional[Path]], int]] = {
     "init": _handle_init,
     "record": _handle_record,
@@ -333,6 +368,7 @@ COMMAND_HANDLERS: Dict[str, Callable[[argparse.Namespace, Optional[Path]], int]]
     "evict-state": _handle_evict_state,
     "evict-arch": _handle_evict_arch,
     "restore": _handle_restore,
+    "compact-ledger": _handle_compact_ledger,
 }
 
 

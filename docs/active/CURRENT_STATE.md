@@ -113,6 +113,14 @@ flowchart LR
 4. **Promotion Replenishment**: When an active task transitions to `PROMOTED` or `ROLLED_BACK`, the highest-priority `PARKED` task MAY transition to `IN_PROGRESS`.
 5. **Silence Is Not Consent Invariant (묵시적 승인 금지)**: When an interactive elicitation (`ask_question`), review panel, or task proposal encounters a timeout or absence of explicit operator response, the task MUST NOT auto-advance to `PLANNED` or `IN_PROGRESS`. It MUST transition to `ON_HOLD` or `PARKED` with an explicit reason record, awaiting sovereign operator reactivation.
 
+### 2.2 Rolling Task Horizon & Compaction Policy (>= 10 Promoted Tasks)
+- **Compaction Trigger**: When the count of promoted tasks in the state ledger reaches 10 or more, compaction is mechanically required.
+- **Stop Hook Enforcement**: The Stop Hook (`scripts/guard_configuration_baseline.py`) SHALL intercept turn completion if promoted tasks exceed the threshold.
+- **Cortex Snapshot Invariant**: An immutable snapshot of the full ledger MUST be persisted into `cortex.db` (`state_revisions` and `fts_archive_search`).
+- **Episodic Memory Invariant**: An episodic trace of compaction MUST be recorded in `episodic_events`.
+- **File Archive Generation**: Pruned historical tasks MUST be authored into `docs/archived/TASK_ARCHIVE_<start>_<end>.md`.
+- **Rolling Retained Horizon**: Exactly the 5 most recent promoted tasks MUST be retained in the Kanban board (`ColPromoted`) and Task Ledger table.
+
 ---
 
 ## 3. Active Sprint Radar & Kanban Board
@@ -142,16 +150,13 @@ flowchart TD
     end
 
     subgraph ColPromoted ["5. PROMOTED (Recent 5 Active Horizon)"]
-        PRM_ARCH["TASK-001..026: Archived to cortex.db and docs-archived"]
-        PRM_127["TASK-027: Mechanical Interface Skeleton Baker and AST Docking Linker (v1.0)"]
-        PRM_128["TASK-028: Dialectical Requirements Interrogator and Adversarial Red Team Engine (v1.0)"]
-        PRM_129["TASK-029: Resilient Exponential Backoff Retry Policy Engine (v1.0)"]
-        PRM_130["TASK-030: AI-Native Evolutionary Recombination Engine (v1.0)"]
+        PRM_ARCH["TASK-001..030: Archived to cortex.db and docs/archived"]
         PRM_131["TASK-031: Configuration Baseline and Run Completion Enforcement Hook (v1.0)"]
         PRM_132["TASK-032: Rebuild Core 4 Agents as Sovereign Advisory Consultants (v1.0)"]
         PRM_133["TASK-033: Cortex Knowledge Purification and Shadow Grounding Engine (v1.0)"]
         PRM_134["TASK-034: Eliminate Redundant Built-in Duplicates & Purge Telemetry Collectors (v1.0)"]
         PRM_135["TASK-035: Living Architecture Blueprint v4.0 & Stop Hook Architecture Sync Guard (v1.0)"]
+        PRM_136["TASK-036: State Ledger Rolling Compactor, Cortex Snapshot Engine & Stop Hook Compaction Guard (v1.0)"]
     end
 
     ColPlanned -->|"Assign Available Slot"| ColActive
@@ -163,15 +168,12 @@ flowchart TD
 
 | Task ID | Task Description | Lifecycle Status | Retries [Used/Max] | Blast Radius Tier | Owner | Verification Gate |
 | :--- | :--- | :--- | :---: | :--- | :--- | :--- |
-| *`TASK-001..026`* | *Archived to cortex.db and docs/archived/TASK_ARCHIVE_001_026.md* | `ARCHIVED` | - | Multiple | Platform Team | 100% CI pass; Trunk merged; Knowledge persisted |
-| **`TASK-027`** | Mechanical Interface Skeleton Baker and AST Docking Linker | `PROMOTED` | 0/2 | Tier 2 (Code) | Platform Lead | 50 companion tests pass (0.74s); Clean AST; Fail-open verified. |
-| **`TASK-028`** | Dialectical Requirements Interrogator and Adversarial Red Team Engine | `PROMOTED` | 0/2 | Tier 2 (Code) | Platform Lead | 31 companion tests pass (8.11s); Clean AST; Fail-open verified. |
-| **`TASK-029`** | Resilient Exponential Backoff Retry Policy Engine | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Engineer | 45 companion tests pass (0.35s); Clean AST; AST Docked; Fail-open verified. |
-| **`TASK-030`** | AI-Native Evolutionary Recombination Engine | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Engineer | 41 companion tests pass (0.99s); Clean AST; AST Docked; Fail-open verified. |
+| *`TASK-001..030`* | *Archived to cortex.db and docs/archived/TASK_ARCHIVE_001_026.md, TASK_ARCHIVE_027_030.md* | `ARCHIVED` | - | Multiple | Platform Team | 100% CI pass; Trunk merged; Knowledge persisted |
 | **`TASK-031`** | Configuration Baseline and Run Completion Enforcement Hook | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Engineer | 46 companion tests pass (0.86s); Clean AST; Hook registered; Fail-open verified. |
 | **`TASK-033`** | Cortex Knowledge Purification and Shadow Grounding Engine | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Engineer | 11 companion tests pass (0.25s); 349 full tests pass; 174 spam purged; < 5ms SLA verified; Clean AST. |
 | **`TASK-034`** | Eliminate Redundant Built-in Duplicates & Purge Telemetry Collectors | `PROMOTED` | 0/2 | Tier 3 (Governance) | Sovereign Architect | Deleted 8 redundant files (grill-me, ACTIVE_CONTRACT, backprop, diagnostics); GEMINI.md v10.1; 0 defects. |
 | **`TASK-035`** | Living Architecture Blueprint v4.0 & Stop Hook Architecture Sync Guard | `PROMOTED` | 0/2 | Tier 2 (Code) | Sovereign Architect | 52 companion tests pass (0.89s); 296 full tests pass; ARCHITECTURE.md v4.0 living blueprint; Clean AST; Stop Hook verified. |
+| **`TASK-036`** | State Ledger Rolling Compactor, Cortex Snapshot Engine & Stop Hook Compaction Guard | `PROMOTED` | 0/2 | Tier 2 (Code) | Sovereign Architect | 11 compactor tests pass (0.26s); 56 baseline tests pass; Snapshot in cortex.db; Clean AST; Compaction verified. |
 
 ---
 

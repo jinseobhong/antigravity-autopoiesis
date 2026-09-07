@@ -27,10 +27,12 @@ try:
         ARCHITECTURE_SYNC_DIRECTIVE_MESSAGE,
         COMMIT_DIRECTIVE_MESSAGE,
         EPHEMERAL_PATTERNS,
+        STATE_COMPACTION_DIRECTIVE_MESSAGE,
         ConfigurationBaselineReport,
         HookInvocationContext,
         build_cli_parser,
         check_architecture_sync,
+        check_state_compaction,
         evaluate_baseline,
         inspect_ledger_tasks,
         is_ephemeral_path,
@@ -46,10 +48,12 @@ except ModuleNotFoundError:
         ARCHITECTURE_SYNC_DIRECTIVE_MESSAGE,
         COMMIT_DIRECTIVE_MESSAGE,
         EPHEMERAL_PATTERNS,
+        STATE_COMPACTION_DIRECTIVE_MESSAGE,
         ConfigurationBaselineReport,
         HookInvocationContext,
         build_cli_parser,
         check_architecture_sync,
+        check_state_compaction,
         evaluate_baseline,
         inspect_ledger_tasks,
         is_ephemeral_path,
@@ -691,6 +695,67 @@ class TestArchitectureSyncGuard(unittest.TestCase):
         is_synced, msg = check_architecture_sync((r"core\submodule\feature.py",))
         self.assertEqual(is_synced, False)
         self.assertIn("[ARCHITECTURE SYNC REQUIRED]", str(msg))
+
+
+class TestStateCompactionGuard(unittest.TestCase):
+    """Evaluates Stop Hook enforcement of state ledger compaction when promoted tasks >= 10."""
+
+    def setUp(self) -> None:
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.work_dir = Path(self.temp_dir.name)
+        self.compact_ledger = self.work_dir / "compact_state.md"
+        self.compact_ledger.write_text(
+            "# State\n"
+            "Active Task Capacity: 0 of 5\n"
+            "| **`TASK-031`** | Hook | `PROMOTED` | 0/2 | Tier 2 | Eng | Pass |\n"
+            "| **`TASK-032`** | Agent | `PROMOTED` | 0/2 | Tier 2 | Eng | Pass |\n",
+            encoding="utf-8",
+        )
+        rows = "\n".join(
+            f"| **`TASK-0{i}`** | Desc {i} | `PROMOTED` | 0/2 | Tier 2 | Eng | Pass |"
+            for i in range(10, 20)
+        )
+        self.bloated_ledger = self.work_dir / "bloated_state.md"
+        self.bloated_ledger.write_text(
+            f"# State\nActive Task Capacity: 0 of 5\n### 3.2 Current State Task Ledger\n\n{rows}\n",
+            encoding="utf-8",
+        )
+
+    def tearDown(self) -> None:
+        self.temp_dir.cleanup()
+
+    def test_compaction_guard_allows_when_under_threshold(self) -> None:
+        """Positive test: Ledger with 2 tasks (< 10 threshold) clears compaction check."""
+        is_compact, msg = check_state_compaction(self.compact_ledger, threshold=10)
+        self.assertEqual(is_compact, True)
+        self.assertIsNone(msg)
+
+    def test_negative_compaction_guard_blocks_when_at_or_above_threshold(self) -> None:
+        """Negative test: Ledger with 10 promoted tasks returns continue directive."""
+        is_compact, msg = check_state_compaction(self.bloated_ledger, threshold=10)
+        self.assertEqual(is_compact, False)
+        self.assertIsNotNone(msg)
+        self.assertIn("[STATE COMPACTION REQUIRED]", str(msg))
+
+    def test_negative_baseline_evaluation_blocks_turn_when_compaction_needed(self) -> None:
+        """Negative test: evaluate_baseline intercepts turn completion when compaction required."""
+        report = evaluate_baseline(
+            repo_root=self.work_dir,
+            ledger_path=self.bloated_ledger,
+            uncommitted_override=(),
+            compaction_threshold=10,
+        )
+        self.assertEqual(report.decision, "continue")
+        self.assertIn("[STATE COMPACTION REQUIRED]", str(report.explanation))
+        resp = report.to_hook_response()
+        self.assertEqual(resp.get("decision"), "continue")
+        self.assertIn("[STATE COMPACTION REQUIRED]", str(resp.get("reason")))
+
+    def test_negative_compaction_guard_nonexistent_ledger_fail_open(self) -> None:
+        """Negative test: Non-existent ledger file fails open cleanly without raising exception."""
+        is_compact, msg = check_state_compaction(self.work_dir / "MISSING.md", threshold=10)
+        self.assertEqual(is_compact, True)
+        self.assertIsNone(msg)
 
 
 class TestHookGovernanceAndVerificationMatrix(unittest.TestCase):

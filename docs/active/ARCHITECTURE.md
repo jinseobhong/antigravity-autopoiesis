@@ -51,8 +51,12 @@ graph TD
         CortexDB[("SQLite WAL Database (data/cortex.db)
 - 28 diamond-grade invariants
 - busy_timeout=5000ms")]
+        StateCompactor["State Ledger Compactor (core/state_compactor.py)
+- Rolling compaction threshold (>= 10)
+- Full ledger snapshot to cortex.db"]
         ShadowGrounding -->|"Read-only connection"| CortexDB
         Cortex -->|"Read / Write connection"| CortexDB
+        StateCompactor -->|"Snapshot persistence"| CortexDB
     end
 
     subgraph AdvisorySubsystem["Ephemeral Advisory Subsystem (Shadow Clones)"]
@@ -76,9 +80,10 @@ graph TD
     end
 
     subgraph GovernanceSubsystem["Governance & SCM Enforcement"]
-        BaselineGuard["Configuration Baseline & Arch Sync Guard (scripts/guard_configuration_baseline.py)
+        BaselineGuard["Configuration Baseline, Arch Sync & Compaction Guard (scripts/guard_configuration_baseline.py)
 - Stop hook mandatory commit enforcement
-- Mechanical Architecture Sync Guard"]
+- Mechanical Architecture Sync Guard
+- State Compaction Guard (promoted >= 10)"]
         IVVGuard["IV&V Pipeline Guard (scripts/guard_ivv_pipeline.py)
 - Read-only enforcement for subagents"]
     end
@@ -91,10 +96,11 @@ graph TD
     DirectMode -->|"3. Protocol Docking Verification"| ASTCheck
     DirectMode -->|"4. Evolutionary Candidate Generation"| EvoEngine
     DirectMode -->|"5. Automated Preflight Gate Verification"| Preflight
-    DirectMode -->|"6. Stop Hook SCM & Arch Sync"| BaselineGuard
-    DirectMode -->|"7. Subagent Execution Isolation"| IVVGuard
-    Preflight -.->|"8. Record Epistemic Telemetry"| Cortex
-    DirectMode -->|"9. Verified Commit to Trunk"| ProductionRoot[("Repository Root (.)")]
+    DirectMode -->|"6. State Compaction & Snapshot"| StateCompactor
+    DirectMode -->|"7. Stop Hook SCM, Arch & Compaction"| BaselineGuard
+    DirectMode -->|"8. Subagent Execution Isolation"| IVVGuard
+    Preflight -.->|"9. Record Epistemic Telemetry"| Cortex
+    DirectMode -->|"10. Verified Commit to Trunk"| ProductionRoot[("Repository Root (.)")]
 ```
 
 ---
@@ -107,6 +113,8 @@ graph TD
 | **`ShadowGrounding -> SQLite`** | Read-Only Connection Pool | Parameterized SQL query | Row tuples | `< 2.0ms` | Thread-local connection recycle |
 | **`Orchestrator -> Cortex`** | Python In-Memory API / CLI | `record(outcome, trigger, directive)` | Event ID string / JSON dict | `< 25.0ms` | Spooling to in-memory ring buffer |
 | **`Cortex -> SQLite`** | SQLite C-API (WAL Mode) | Parameterized DML statement | Affected row count | `< 5.0ms` (busy: 5000ms) | Exponential backoff retry with jitter |
+| **`Orchestrator -> StateCompactor`** | Python In-Process API / CLI | `compact_state_ledger(target_path)` | `StateCompactionReport` dict | `< 100ms` | Fail-open fallback; retains original ledger |
+| **`StateCompactor -> CortexDocs`** | Python In-Process API | `snapshot_state_ledger(content)` | Revision ID string | `< 25ms` | Spooling to cortex.db state_revisions |
 | **`EvoEngine -> Subprocess`** | OS Process Execution | Candidate code string + Test harness | Telemetry dict (stdout, stderr, exit code) | `3.0s hard ceiling` | Subprocess timeout; candidate marked lethal |
 | **`Preflight -> QualityGates`** | Python In-Process API | Target paths + Suite specifications | Gate report (Pass/Fail) | `< 10.0s max` | Gate rejection; blocks task completion |
 | **`Stop Hook -> SCM & Arch Sync`** | Python Subprocess Execution | Hook stdin context JSON | Stop hook JSON response dict | `< 5.0s max` | Blocks turn completion if uncommitted or unsynced |
@@ -260,15 +268,42 @@ graph LR
 
 ---
 
-### 3.6 SCM Baseline & Stop Hook Architecture Sync Guard (`scripts/guard_configuration_baseline.py`)
+### 3.6 SCM Baseline, Architecture Sync & State Compaction Guard (`scripts/guard_configuration_baseline.py`)
 
-To prevent architecture documentation from decaying into a dead specification, the Antigravity Stop Hook enforces mechanical synchronization between physical code and documentation:
+To prevent architecture documentation from decaying into a dead specification and state ledgers from overflowing token budgets, the Antigravity Stop Hook enforces three mechanical quality gates:
 
 1. **Architecture Sync Guard**:
    - When any file in `core/` is created, modified, or deleted, `scripts/guard_configuration_baseline.py` inspects the working tree.
    - If `core/` was modified but `docs/active/ARCHITECTURE.md` is absent from the changeset, the hook blocks turn conclusion with `decision="continue"` and directive:
      `[ARCHITECTURE SYNC REQUIRED] Core modules were modified in this run, but docs/active/ARCHITECTURE.md was not updated. Mandatory Architecture Sync Invariant: You MUST review and reflect physical architecture changes in docs/active/ARCHITECTURE.md before concluding.`
-2. **Configuration Baseline Guard**:
+2. **State Compaction Guard**:
+   - When total promoted tasks in `docs/active/CURRENT_STATE.md` reach 10 or more, the hook blocks turn conclusion with `decision="continue"` and directive:
+     `[STATE COMPACTION REQUIRED] docs/active/CURRENT_STATE.md contains N promoted tasks (ceiling is 10). Mandatory State Compaction Invariant: You MUST compact CURRENT_STATE.md using python -m core.cortex compact-ledger before concluding.`
+3. **Configuration Baseline Guard**:
    - When no tasks are `IN_PROGRESS` and uncommitted changes exist, the hook blocks turn conclusion until the operator or agent commits the working tree (`git add . && git commit -m '...'`).
-3. **Fail-Open Operational Safety**:
+4. **Fail-Open Operational Safety**:
    - In the event of transient git timeouts or malformed hook payloads, the script fails open cleanly without crashing the developer environment.
+
+---
+
+### 3.7 State Ledger Rolling Compactor & Cortex Snapshot Engine (`core/state_compactor.py` & `core/cortex_docs.py`)
+
+The State Ledger Compaction subsystem prevents token bloat and context degradation caused by historical task accumulation in `docs/active/CURRENT_STATE.md`:
+
+```bash
+# Example Invocation via Cortex CLI
+python -m core.cortex compact-ledger --target docs/active/CURRENT_STATE.md
+```
+
+#### Core Invariants & Mechanics
+1. **Rolling Task Horizon (Max 10 Threshold)**:
+   - When total promoted tasks in `CURRENT_STATE.md` reach 10 or more, compaction is mechanically required.
+   - The compactor prunes older completed tasks from both the Kanban board (`ColPromoted`) and the task ledger table, retaining strictly the most recent 5 completed tasks.
+2. **Deterministic Epistemic Snapshot (`core/cortex_docs.py`)**:
+   - Prior to modifying the ledger, `snapshot_state_ledger()` captures the complete raw markdown into `state_revisions` in `data/cortex.db`.
+   - The revision is immediately indexed into `fts_archive_search` virtual table, enabling instant full-text search across all historical tasks via `python -m core.cortex query-archive "<query>"`.
+3. **Physical Historical Archive Document**:
+   - Pruned tasks are serialized into structured markdown archives under `docs/archived/` (e.g. `TASK_ARCHIVE_027_030.md`), preserving audit trails and verification evidence permanently in git.
+4. **Mechanical Stop Hook Enforcement**:
+   - `check_state_compaction()` intercepts every Stop lifecycle event. If an operator or agent forgets to compact the ledger when >= 10 tasks accumulate, turn conclusion is blocked until compaction executes.
+
