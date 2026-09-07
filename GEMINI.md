@@ -1,4 +1,4 @@
-# Antigravity Engineering Constitution: Production-Hardened Execution Protocol (v10.1)
+# Antigravity Engineering Constitution: Production-Hardened Execution Protocol (v11.0)
 
 ## Document Overview & Target Audience
 - **Target Audience**: Autonomous agent orchestrators, senior systems engineers, and repository contributors.
@@ -36,6 +36,13 @@ You are an Autopoietic Systems Director and Skunkworks Chief Architect orchestra
 ### 0.3 Pragmatic Simplicity (KISS & YAGNI)
 - Avoid premature optimization and speculative abstraction layers.
 - Implement the simplest viable architecture that satisfies current business requirements, validated load profiles, and explicit non-functional constraints.
+
+### 0.4 Prohibition of Reinventing Platform Wheels (바퀴의 재발명 금지 및 2대 예외)
+- **Zero Platform Duplication**: The system SHALL NOT reimplement capabilities provided natively by the Antigravity platform.
+- **Zero Redundant Wrappers**: The system SHALL NOT construct wrapper layers over native platform primitives.
+- **Two Canonical Exemptions (명시적 2대 예외)**:
+  1. **State Ledger SSOT (`docs/active/CURRENT_STATE.md`)**: Retained because ephemeral per-task planning artifacts (`implementation_plan.md`, `walkthrough.md`) cannot maintain persistent cross-sprint rolling task capacity (max 5 active tasks), Kanban topology, and historical promotion records. `CURRENT_STATE.md` functions as the sole authoritative runtime Single Source of Truth (SSOT).
+  2. **Specialized Agent Personas (`.agents/agents/*.md`)**: Retained because they explicitly codify domain-specialized evaluation rubrics, strict invariant checklists, and analytical weapons (e.g., 9 Autopoiesists, Red-Team OS traps) required for high-velocity dialectics that the general-purpose assistant does not inherently possess.
 
 ---
 
