@@ -155,6 +155,7 @@ flowchart TD
         PRM_139["TASK-039: Stop Hook Preflight Verification Hardening & Fast/Full Calibration (v1.0)"]
         PRM_140["TASK-040: Physical Sandbox Purge, Zombie Dead Code Elimination & Git-Native Unification (v1.0)"]
         PRM_141["TASK-041: Generative UI 4-Layer Cognitive HUD & Telemetry Generator (v1.0)"]
+        PRM_142["TASK-042: Core Dead Code Purge, Uppercase COGNITIVE_HUD.html & PreInvocation Hook Integration (v1.0)"]
     end
 
     ColPlanned -->|"Assign Available Slot"| ColActive
@@ -172,6 +173,7 @@ flowchart TD
 | **`TASK-039`** | Stop Hook Preflight Verification Hardening & Fast/Full Calibration | `PROMOTED` | 0/2 | Tier 2 (Code) | Sovereign Architect | 63 companion tests pass (2.46s); 329 full tests pass; Clean AST; Preflight Stop Guard verified. |
 | **`TASK-040`** | Physical Sandbox Purge, Zombie Dead Code Elimination & Git-Native Unification | `PROMOTED` | 0/2 | Tier 3 (Governance) | Sovereign Architect | Purged 1,500+ lines zombie runners; Removed sandbox import fallbacks across 24 files; Abolished physical sandbox in GEMINI.md; 329 tests pass; Full preflight verified. |
 | **`TASK-041`** | Generative UI 4-Layer Cognitive HUD & Telemetry Generator | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Engineer | 11 companion tests pass (1.18s); 340 full tests pass; AST docked (0 defects); Sub-150ms CLI; Generative UI compliant. |
+| **`TASK-042`** | Core Dead Code Purge, Uppercase COGNITIVE_HUD.html & PreInvocation Hook Integration | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Engineer | Purged 1,487 lines dead core code; Standardized uppercase COGNITIVE_HUD.html; PreInvocation hook & 11 companion tests verified (351 full tests pass); AST compliance 0 defects. |
 
 ---
 

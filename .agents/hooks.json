@@ -21,5 +21,14 @@
         "timeout": 10
       }
     ]
+  },
+  "cognitive-hud-guard": {
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "python ../scripts/guard_preinvocation_hud.py",
+        "timeout": 5
+      }
+    ]
   }
 }
