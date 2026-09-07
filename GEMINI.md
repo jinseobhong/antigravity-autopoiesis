@@ -232,6 +232,7 @@ python scripts/compliance_checker.py <target_paths>
 ### 4.3 Safe Fast-Path Test Execution
 - Sub-process test executions must enforce process sandboxing with a hard watchdog timeout (3.0s per test).
 - Shared mutable global state, singleton registries, and mocked system calls must be cleaned up via automated test teardown fixtures (`autouse=True`) to prevent cross-test pollution.
+- **Zero Repository Tree Pollution**: Companion tests and CLI execution tests SHALL execute against isolated temporary directories using `tempfile.TemporaryDirectory`. Tests SHALL NOT create, mutate, or leave behind artifacts in production directories.
 
 ### 4.4 Test Lifecycle Management & Regression Protection
 - **Strict Prohibition of Unilateral Test Deletion**:
