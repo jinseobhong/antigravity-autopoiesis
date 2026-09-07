@@ -156,6 +156,7 @@ flowchart TD
         PRM_140["TASK-040: Physical Sandbox Purge, Zombie Dead Code Elimination & Git-Native Unification (v1.0)"]
         PRM_141["TASK-041: Generative UI 4-Layer Cognitive HUD & Telemetry Generator (v1.0)"]
         PRM_142["TASK-042: Core Dead Code Purge, Uppercase COGNITIVE_HUD.html & PreInvocation Hook Integration (v1.0)"]
+        PRM_143["TASK-043: Full-Disk Physical Survey, 20 Orphan Bytecode Purge & Sandbox Fallback Cleanup (v1.0)"]
     end
 
     ColPlanned -->|"Assign Available Slot"| ColActive
@@ -174,6 +175,7 @@ flowchart TD
 | **`TASK-040`** | Physical Sandbox Purge, Zombie Dead Code Elimination & Git-Native Unification | `PROMOTED` | 0/2 | Tier 3 (Governance) | Sovereign Architect | Purged 1,500+ lines zombie runners; Removed sandbox import fallbacks across 24 files; Abolished physical sandbox in GEMINI.md; 329 tests pass; Full preflight verified. |
 | **`TASK-041`** | Generative UI 4-Layer Cognitive HUD & Telemetry Generator | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Engineer | 11 companion tests pass (1.18s); 340 full tests pass; AST docked (0 defects); Sub-150ms CLI; Generative UI compliant. |
 | **`TASK-042`** | Core Dead Code Purge, Uppercase COGNITIVE_HUD.html & PreInvocation Hook Integration | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Engineer | Purged 1,487 lines dead core code; Standardized uppercase COGNITIVE_HUD.html; PreInvocation hook & 11 companion tests verified (351 full tests pass); AST compliance 0 defects. |
+| **`TASK-043`** | Full-Disk Physical Survey, 20 Orphan Bytecode Purge & Sandbox Fallback Cleanup | `PROMOTED` | 0/2 | Tier 2 (Code) | Sovereign Architect | Physically verified all 6 root dirs (0 unreferenced modules); Purged 20 orphan .pyc files; Removed dead sandbox fallbacks across tests; 351 full tests pass; 100% preflight verified. |
 
 ---
 
@@ -186,7 +188,7 @@ System performance boundaries are defined by contiguous, non-overlapping ASCII i
 | **Compliance Check Time** | `Duration <= 500ms` | `500ms < Duration <= 1500ms` | `Duration > 1500ms` | Prune file collection scope; profile AST parsing |
 | **Active Task Concurrency**| `0 <= Tasks <= 4` (Nominal Idle/Active) | `Tasks == 5` (Capacity Saturated) | `Tasks > 5` (Capacity Violation) | Enforce rolling horizon limit; transition task to PARKED |
 | **Warm Runner Test Watchdog**| `Duration <= 3000ms` | `3000ms < Duration <= 5000ms`| `Duration > 5000ms` | Terminate worker process via PID-targeted kill; recycle daemon |
-| **Rollback SLA** | `Recovery <= 10s` | `10s < Recovery <= 30s` | `Recovery > 30s` | Execute emergency reverse patch: git apply -R sandbox/patch/${TASK_ID}.diff |
+| **Rollback SLA** | `Recovery <= 10s` | `10s < Recovery <= 30s` | `Recovery > 30s` | Execute emergency atomic rollback: git checkout -- . && git clean -fd |
 | **SQLite Busy Timeout** | `Wait <= 200ms` | `200ms < Wait <= 5000ms` | `Wait > 5000ms` | Spool event traces to in-memory fallback ring buffer |
 
 ---
@@ -290,45 +292,42 @@ timeline
 
 ---
 
-## 8. Operational Runbook: Sovereign Promotion & Emergency Rollback
+## 8. Operational Runbook: Sovereign Verification & Emergency Rollback
 
-This runbook defines the mandatory 4-phase protocol for promoting sandbox artifacts to the production root.
+This runbook defines the mandatory 4-phase protocol for verifying modifications and committing baseline configurations directly within the Git working tree under sovereign authoring.
 
 ### 8.1 Promotion Procedure
 
-#### Step 1: Pre-Promotion Dry-Run Assertion
+#### Step 1: Preflight Verification
 > [!NOTE]
-> **Blast Radius**: Zero. Read-only assertion evaluating patch applicability against current trunk state.
+> **Blast Radius**: Zero. Automated in-process and subprocess verification evaluating compliance, topology, and regression tests.
 
-1. **Pre-Check Command**:
-   ```bash
-   git apply --check --verbose sandbox/patch/${TASK_ID}.diff
-   ```
-2. **Expected Verification Output**:
-   ```text
-   Checking patch sandbox/patch/<task_id>.diff...
-   <Exit Code 0: Patch applies cleanly without merge conflicts>
-   ```
-
-#### Step 2: Atomic Patch Application
-> [!CAUTION]
-> **Blast Radius**: High. Modifies production trunk files specified in the diff manifest.
-> **Abort Thresholds**: Abort execution immediately if uncommitted trunk changes exist (`git status --porcelain` is non-empty) or if patch application produces offset/fuzz warnings.
-
-1. **Execution Command**:
-   ```bash
-   git apply --whitespace=fix sandbox/patch/${TASK_ID}.diff
-   ```
-
-#### Step 3: Immediate Deterministic Verification
 1. **Verification Command**:
    ```bash
-   python scripts/compliance_checker.py
+   python scripts/preflight_check.py --quick
    ```
 2. **Expected Verification Output**:
    ```text
-   Summary: Audited N file(s) | Defects Found: 0
-   VERDICT: APPROVED (100% Quantitative Compliance Passed)
+   PREFLIGHT PASS: All quality gates cleared (Exit code 0).
+   ```
+
+#### Step 2: Working Tree Status Inspection
+> [!NOTE]
+> **Blast Radius**: Zero. Read-only assertion evaluating modified files.
+
+1. **Inspection Command**:
+   ```bash
+   git status --porcelain
+   ```
+
+#### Step 3: Baseline Configuration Commit
+> [!IMPORTANT]
+> **Blast Radius**: Medium. Modifies repository HEAD and commits verified changes.
+
+1. **Commit Command**:
+   ```bash
+   git add <target_files>
+   git commit -m "<type>(<scope>): <concise descriptive message>"
    ```
 
 #### Step 4: Emergency Rollback

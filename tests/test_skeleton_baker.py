@@ -284,8 +284,6 @@ class TestSkeletonBakerFunctional(unittest.TestCase):
     def test_cli_execution_exits_zero(self) -> None:
         """Positive test: CLI execution python -m core.skeleton_baker exits 0 [INV-DOCK-03]."""
         target_module = "core.skeleton_baker"
-        if not Path("core/skeleton_baker.py").exists():
-            target_module = "sandbox.core.skeleton_baker"
 
         cmd = [
             sys.executable,

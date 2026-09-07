@@ -47,15 +47,8 @@ from scripts.guard_configuration_baseline import (
 
 
 def _resolve_guard_script_path() -> Path:
-    """Locates guard_configuration_baseline.py across sandbox and production roots."""
-    candidates = [
-        Path(__file__).resolve().parent.parent / "scripts" / "guard_configuration_baseline.py",
-        Path(__file__).resolve().parent.parent / "sandbox" / "scripts" / "guard_configuration_baseline.py",
-    ]
-    for c in candidates:
-        if c.exists():
-            return c
-    return candidates[0]
+    """Locates guard_configuration_baseline.py in scripts directory."""
+    return Path(__file__).resolve().parent.parent / "scripts" / "guard_configuration_baseline.py"
 
 
 def _init_git_repo(repo_dir: Path, is_dirty: bool) -> None:
@@ -418,7 +411,7 @@ class TestBaselineEvaluationCore(unittest.TestCase):
         report = evaluate_baseline(
             repo_root=self.work_dir,
             ledger_path=self.idle_ledger,
-            uncommitted_override=("tests/a.py", "sandbox/b.py"),
+            uncommitted_override=("tests/a.py", "core/b.py"),
         )
         self.assertEqual(report.decision, "continue")
         self.assertEqual(len(report.uncommitted_files), 2)

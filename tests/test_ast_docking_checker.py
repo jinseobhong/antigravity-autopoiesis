@@ -221,8 +221,6 @@ class TestAstDockingFunctional(unittest.TestCase):
         _write_impl_source(impl_path, "TaskRunner", methods)
 
         target_module = "core.ast_docking_checker"
-        if not Path("core/ast_docking_checker.py").exists():
-            target_module = "sandbox.core.ast_docking_checker"
 
         cmd = [
             sys.executable,
@@ -256,8 +254,6 @@ class TestAstDockingFunctional(unittest.TestCase):
         _write_impl_source(impl_path, "JsonSerializer", methods)
 
         target_module = "core.ast_docking_checker"
-        if not Path("core/ast_docking_checker.py").exists():
-            target_module = "sandbox.core.ast_docking_checker"
 
         cmd = [
             sys.executable,
@@ -432,8 +428,6 @@ class TestAstDockingAdversarial(unittest.TestCase):
         _write_impl_source(impl_path, "I", [("do_other_work", ["self"])])
 
         target_module = "core.ast_docking_checker"
-        if not Path("core/ast_docking_checker.py").exists():
-            target_module = "sandbox.core.ast_docking_checker"
 
         cmd = [
             sys.executable,
@@ -466,8 +460,6 @@ class TestAstDockingAdversarial(unittest.TestCase):
         _write_impl_source(impl_path, "I", [("render", ["self", "component"])])
 
         target_module = "core.ast_docking_checker"
-        if not Path("core/ast_docking_checker.py").exists():
-            target_module = "sandbox.core.ast_docking_checker"
 
         cmd = [
             sys.executable,
