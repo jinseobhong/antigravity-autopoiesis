@@ -8,7 +8,7 @@ dependencies:
   - "GEMINI.md"
 ---
 
-# Antigravity Lean Cortex: Physical System Blueprint (ARCHITECTURE.md v3.0)
+# Antigravity Lean Cortex: Living Physical System Blueprint (ARCHITECTURE.md v4.0)
 
 > [!CAUTION]
 > ### ON-CALL EMERGENCY TRIAGE (30-SECOND ACCESS)
@@ -16,16 +16,17 @@ dependencies:
 >
 > | Incident Symptom | Suspected Subsystem | Deterministic Health Check | Immediate Recovery Action |
 > | :--- | :--- | :--- | :--- |
-> | **SQLite Lock Contention** | `core/cortex.py` | `python -m core.cortex stats` | Retry with exponential backoff or flush spool buffer |
-> | **Test Suite Regression** | Test Suites | `python -m unittest discover tests/` | `git checkout -- tests/` |
-> | **Preflight Gate Failure** | Quality Gates | `python scripts/preflight_check.py --verbose` | `python scripts/compliance_checker.py <failing_path>` |
-> | **Corrupted Working Tree** | Repository Root (`.`) | `git status --porcelain` | `git checkout -- . && git clean -fd` |
+> | **SQLite Lock Contention** | `core/cortex.py` | `python -m core.cortex stats` | Retry with exponential backoff or inspect connection pool |
+> | **Test Suite Regression** | Test Suites | `python -m unittest discover tests/` | Revert failing tests via `git checkout -- tests/` |
+> | **Preflight Gate Failure** | Quality Gates | `python scripts/preflight_check.py --verbose` | Inspect defect line via `python scripts/compliance_checker.py <path>` |
+> | **Architecture Sync Interception** | SCM Stop Hook | `python scripts/guard_configuration_baseline.py --check-only` | Update `docs/active/ARCHITECTURE.md` to reflect modified `core/` modules |
+> | **Corrupted Working Tree** | Repository Root (`.`) | `git status --porcelain` | Execute atomic reset: `git checkout -- . && git clean -fd` |
 
 ---
 
 ## 1. Closed-Loop Physical Architecture Topology
 
-The Antigravity platform operates as a deterministic, closed-loop cybernetic system where past operational memories actively ground planning, and verified solutions feed back into persistent storage.
+Project Autopoiesis operates as a deterministic, closed-loop cybernetic software development platform. Past verified solutions and anti-patterns actively ground real-time code authoring through sub-5ms JIT memory retrieval, while mechanical quality gates and Stop hooks enforce architectural immutability.
 
 ```mermaid
 graph TD
@@ -35,74 +36,88 @@ graph TD
 
     subgraph OrchestratorEngine["Orchestrator & Execution Engine"]
         DirectMode["Sovereign Orchestrator (GEMINI.md)
-- Primary direct authoring & execution
-- Subagents: 100% read-only review panels"]
+- Sole author of source code and tests
+- Executes direct file modifications
+- Single-threaded deterministic execution"]
     end
 
-    subgraph MemorySubsystem["Cognitive Memory Subsystem (core/cortex.py)"]
-        Cortex["Cortex Storage Controller
+    subgraph MemorySubsystem["Cognitive Memory Subsystem"]
+        ShadowGrounding["Shadow Grounding Engine (core/shadow_grounding.py)
+- In-process Read-Only SQLite pool
+- Sub-5ms JIT retrieval SLA (1.3ms measured)"]
+        Cortex["Cortex Storage Controller (core/cortex.py)
 - Decayed LFU Cache
-- BM25 / FTS5 Token Retrieval"]
-        CortexDB[("SQLite WAL Database
-data/cortex.db
+- FTS5 Full-Text Search Engine"]
+        CortexDB[("SQLite WAL Database (data/cortex.db)
+- 28 diamond-grade invariants
 - busy_timeout=5000ms")]
-        Cortex -->|Reads / Writes| CortexDB
+        ShadowGrounding -->|"Read-only connection"| CortexDB
+        Cortex -->|"Read / Write connection"| CortexDB
+    end
+
+    subgraph AdvisorySubsystem["Ephemeral Advisory Subsystem (Shadow Clones)"]
+        ShadowClones["Ephemeral Advisory Subagents (.agents/agents/*.md)
+- 9 Autopoiesists & Review Panels
+- Zero write access / 100% read-only
+- Return structured blueprints via send_message
+- Dissolved immediately upon task conclusion"]
     end
 
     subgraph EvolutionSubsystem["Evolutionary & Verification Engine"]
-        EvoEngine["Evolutionary Recombination Engine
-core/evolutionary_engine.py
+        EvoEngine["Evolutionary Recombination Engine (core/evolutionary_engine.py)
 - Homologous AST crossover
-- Out-of-process watchdog"]
-        ASTCheck["AST Docking Linker
-core/ast_docking_checker.py
+- Out-of-process watchdog ceiling (3.0s)"]
+        ASTCheck["AST Docking Linker (core/ast_docking_checker.py)
 - Static protocol contract closure"]
-        Preflight["Deterministic Preflight Gatekeeper
-scripts/preflight_check.py
-- Compliance, topology, and regression gates"]
+        Preflight["Deterministic Preflight Gatekeeper (scripts/preflight_check.py)
+- Static AST compliance (H-CODE-1..12)
+- Filesystem topology validation
+- Regression test suite (100% pass)"]
     end
 
     subgraph GovernanceSubsystem["Governance & SCM Enforcement"]
-        BaselineGuard["Configuration Baseline Guard
-scripts/guard_configuration_baseline.py
-- Stop hook mandatory commit check"]
-        IVVGuard["IV&V Pipeline Guard
-scripts/guard_ivv_pipeline.py
+        BaselineGuard["Configuration Baseline & Arch Sync Guard (scripts/guard_configuration_baseline.py)
+- Stop hook mandatory commit enforcement
+- Mechanical Architecture Sync Guard"]
+        IVVGuard["IV&V Pipeline Guard (scripts/guard_ivv_pipeline.py)
 - Read-only enforcement for subagents"]
     end
 
-    User -->|Commands & Directives| DirectMode
-    DirectMode -->|1. JIT Context Retrieval < 15ms| Cortex
-    Cortex -.->|Past Anti-Patterns & Directives| DirectMode
-    DirectMode -->|2. Protocol Docking Verification| ASTCheck
-    DirectMode -->|3. Evolutionary Candidate Generation| EvoEngine
-    DirectMode -->|4. Automated Gate Verification| Preflight
-    DirectMode -->|5. SCM Hook Enforcement| BaselineGuard
-    DirectMode -->|6. Reviewer Permission Enforcement| IVVGuard
-    Preflight -.->|7. Telemetry & Defect Records| Cortex
-    DirectMode -->|8. Verified Commit to Repository| ProductionRoot[("Repository Root (.)")]
+    User -->|"Commands & Approvals"| DirectMode
+    DirectMode -->|"1. JIT Context Grounding (< 1.3ms)"| ShadowGrounding
+    ShadowGrounding -.->|"Past Invariants & Anti-Patterns"| DirectMode
+    DirectMode -->|"2. Spawn Advisory Panel (Optional)"| ShadowClones
+    ShadowClones -.->|"IPC Blueprints via send_message"| DirectMode
+    DirectMode -->|"3. Protocol Docking Verification"| ASTCheck
+    DirectMode -->|"4. Evolutionary Candidate Generation"| EvoEngine
+    DirectMode -->|"5. Automated Preflight Gate Verification"| Preflight
+    DirectMode -->|"6. Stop Hook SCM & Arch Sync"| BaselineGuard
+    DirectMode -->|"7. Subagent Execution Isolation"| IVVGuard
+    Preflight -.->|"8. Record Epistemic Telemetry"| Cortex
+    DirectMode -->|"9. Verified Commit to Trunk"| ProductionRoot[("Repository Root (.)")]
 ```
 
 ---
 
 ## 2. Subsystem Interface Contracts
 
-| Boundary | Transport Protocol | Request Payload | Response Contract | SLA / Timeout | Failure Containment |
+| Boundary | Transport Protocol | Request Payload | Response Contract | Latency SLA / Timeout | Failure Containment |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`Orchestrator -> Cortex`** | Python In-Memory API | `query(symptom: str, top_k: int=3)` | `List[CortexRecord]` | `< 15ms` | Fallback to empty context (fail-open) |
-| **`Cortex -> SQLite`** | SQLite C-API (WAL Mode) | Prepared SQL Statement | Row cursor / Affected count | `< 5ms` (busy: 5000ms) | In-memory ring buffer spooling |
-| **`EvoEngine -> Subprocess`** | OS Process Execution | Code string + Test harness | Execution telemetry (stdout/stderr/exit) | `3.0s max` | Subprocess timeout; candidate marked lethal |
-| **`Preflight -> QualityGates`** | Python In-Process API | Target paths + Test specs | Gate audit results (Pass/Fail) | `< 10.0s max` | Gate rejection; blocks task completion |
-| **`Preflight -> Cortex`** | Python In-Process API | `record(outcome, trigger, directive)` | `{"event_id": str, "status": "STORED"}` | `< 25ms` | Log warning; does not crash pipeline |
-| **`SCM Guard -> Git`** | Subprocess Execution | `git status --porcelain` | Status payload + commit directive | `< 5.0s max` | Intercepts turn stop if uncommitted changes exist |
+| **`Orchestrator -> ShadowGrounding`** | Python In-Memory API | `query_knowledge_in_process(symptom, top_k=3)` | `List[ShadowGroundingRecord]` | `< 5.0ms` (actual ~1.3ms) | Fallback to empty context list (fail-open) |
+| **`ShadowGrounding -> SQLite`** | Read-Only Connection Pool | Parameterized SQL query | Row tuples | `< 2.0ms` | Thread-local connection recycle |
+| **`Orchestrator -> Cortex`** | Python In-Memory API / CLI | `record(outcome, trigger, directive)` | Event ID string / JSON dict | `< 25.0ms` | Spooling to in-memory ring buffer |
+| **`Cortex -> SQLite`** | SQLite C-API (WAL Mode) | Parameterized DML statement | Affected row count | `< 5.0ms` (busy: 5000ms) | Exponential backoff retry with jitter |
+| **`EvoEngine -> Subprocess`** | OS Process Execution | Candidate code string + Test harness | Telemetry dict (stdout, stderr, exit code) | `3.0s hard ceiling` | Subprocess timeout; candidate marked lethal |
+| **`Preflight -> QualityGates`** | Python In-Process API | Target paths + Suite specifications | Gate report (Pass/Fail) | `< 10.0s max` | Gate rejection; blocks task completion |
+| **`Stop Hook -> SCM & Arch Sync`** | Python Subprocess Execution | Hook stdin context JSON | Stop hook JSON response dict | `< 5.0s max` | Blocks turn completion if uncommitted or unsynced |
 
 ---
 
 ## 3. Core Subsystems Specification
 
-### 3.1 Cognitive Memory Engine (`core/cortex.py`)
+### 3.1 Cognitive Memory & Shadow Grounding Engine (`core/cortex.py` & `core/shadow_grounding.py`)
 
-The Cortex Memory Engine provides persistent semantic and episodic retrieval across agent context resets using **Decayed LFU (Least Frequently Used) Caching** combined with **SQLite FTS5 Full-Text Indexing**.
+The Cognitive Memory subsystem provides persistent semantic retrieval across context resets using **Decayed LFU (Least Frequently Used) Caching** combined with **SQLite FTS5 Full-Text Indexing**. To eliminate read-lock contention on Windows, high-velocity queries execute via a dedicated in-process read-only connection pool.
 
 #### Physical DDL Schema (`data/cortex.db`)
 ```sql
@@ -111,7 +126,7 @@ PRAGMA busy_timeout = 5000;
 PRAGMA synchronous = NORMAL;
 PRAGMA user_version = 2;
 
--- Episodic Event Ledger
+-- Episodic Event Ledger (Purified Knowledge SSOT)
 CREATE TABLE IF NOT EXISTS episodic_events (
     id TEXT PRIMARY KEY,
     outcome TEXT CHECK(outcome IN ('SUCCESS', 'FAILURE')) NOT NULL,
@@ -125,7 +140,7 @@ CREATE TABLE IF NOT EXISTS episodic_events (
     last_accessed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Full-Text Search (FTS5) Virtual Table for Sub-15ms Token Matching
+-- Full-Text Search (FTS5) Virtual Table for Sub-5ms Token Matching
 CREATE VIRTUAL TABLE IF NOT EXISTS fts_events USING fts5(
     id UNINDEXED,
     component,
@@ -135,41 +150,77 @@ CREATE VIRTUAL TABLE IF NOT EXISTS fts_events USING fts5(
     content_rowid='rowid'
 );
 
--- Triggers for FTS Synchronization
+-- Automated Triggers for FTS Synchronization
 CREATE TRIGGER IF NOT EXISTS trg_fts_insert AFTER INSERT ON episodic_events BEGIN
     INSERT INTO fts_events(rowid, id, component, trigger_tokens, directive)
     VALUES (new.rowid, new.id, new.component, new.trigger_tokens, new.directive);
 END;
+
+CREATE TRIGGER IF NOT EXISTS trg_fts_delete AFTER DELETE ON episodic_events BEGIN
+    INSERT INTO fts_events(fts_events, rowid, id, component, trigger_tokens, directive)
+    VALUES ('delete', old.rowid, old.id, old.component, old.trigger_tokens, old.directive);
+END;
 ```
 
-#### Recency Scoring & Retention Invariants
-The recency weight degrades via a standard half-life formulation evaluated lazily upon access:
+#### Read-Only Connection Pooling (`_ReadOnlyPool`)
+- **Connection Isolation**: Queries run through `sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)`. Read operations never acquire SQLite RESERVED or EXCLUSIVE locks.
+- **Microsecond Latency**: Prepared queries against FTS5 execute in ~1.3ms, safely inside the 5.0ms SLA budget.
+- **Fail-Open Resilience**: If the database file is absent or locked by an external process, `query_knowledge_in_process` falls back to empty results without throwing uncaught exceptions.
+
+#### Recency Scoring Formulation
+Recency weight degrades via a standard half-life formulation evaluated lazily upon access:
 $$W(t) = W_0 \cdot 2^{-\Delta t / t_{\text{half}}} + \alpha \cdot \log(1 + f)$$
 - **Half-life ($t_{\text{half}}$)**: 168 hours (7 days).
 - **Frequency Bonus ($\alpha$)**: $0.15$.
-- **Eviction Threshold**: Rows where $W(t) < 0.05$ and $f < 3$ are vacuumed during maintenance.
+- **Eviction Threshold**: Records with $W(t) < 0.05$ and $f < 3$ are vacuumed during scheduled maintenance.
 
 ---
 
-### 3.2 Out-of-Process Execution & Subprocess Watchdog Subsystem
+### 3.2 Ephemeral Advisory Subsystem (Shadow Clones)
 
-To eliminate risks of infinite loops, memory exhaustion, or interpreter segfaults during dynamic evaluation, all untrusted candidate evaluations execute inside **isolated subprocesses bounded by strict watchdog ceilings**:
+Conforming to GEMINI.md Section 2.1 (**Sovereign Authoring Posture**), subagents operate strictly as ephemeral, read-only advisory consultants:
+
+1. **Zero Write Authority**: Subagents possess zero authority to create, edit, or delete files, and cannot run mutating shell commands.
+2. **Disposable 1-Time Lifecycle**: Clones are spawned on demand for specialized dialectical audit or adversarial red-teaming, and dissolve immediately upon relaying their findings.
+3. **IPC Backpropagation**: All discoveries, candidate algorithms, and review rubrics backpropagate exclusively to the sovereign orchestrator via `send_message`.
+4. **Single-Threaded Authoring**: The sovereign orchestrator alone synthesizes clone insights and authors sequential, deterministic code modifications.
+
+---
+
+### 3.3 Out-of-Process Execution & Subprocess Watchdog Subsystem (`core/evolutionary_engine.py`)
+
+To eliminate risks of infinite loops, memory exhaustion, or interpreter segfaults during dynamic candidate evaluation, untrusted candidate code executes inside **isolated subprocesses bounded by strict watchdog ceilings**:
 
 ```bash
 # Example Invocation via Evolutionary Engine CLI
 python -m core.evolutionary_engine --generations 5 --pop 10 --json
 ```
 
-#### Isolation & Anti-Pollution Invariants
-1. **Address Space Isolation**: Candidate code runs in a dedicated Python subprocess via `subprocess.run()`. Unhandled exceptions, infinite recursion, or native segfaults terminate only the ephemeral child process.
-2. **Watchdog Circuit Breaker**: Hard 3.0-second watchdog ceiling per candidate execution. Infinite loops or blocked I/O trigger immediate `subprocess.TimeoutExpired` and mark the candidate as lethal (`is_lethal=True`).
-3. **Zero Host Pollution**: Candidate evaluations do not modify global interpreter state or shared modules.
+#### Invariant Protections
+1. **Homologous AST Crossover**: Statements swap strictly with statements (`ast.stmt <-> ast.stmt`) and expressions swap strictly with expressions (`ast.expr <-> ast.expr`), preventing malformed syntax trees.
+2. **Immutable Signature Genomes**: Protocol interfaces and outer method signatures remain immutable; mutations and crossovers operate strictly within function bodies.
+3. **Watchdog Circuit Breaker**: Hard 3.0-second watchdog ceiling per candidate execution. Unhandled loops or blocked I/O trigger immediate `subprocess.TimeoutExpired` and mark the candidate as lethal (`is_lethal=True`).
+4. **Zero Host Pollution**: Candidate evaluations execute out-of-process, guaranteeing zero pollution of host memory or global interpreter state.
 
 ---
 
-### 3.3 Deterministic Preflight Gatekeeper (`scripts/preflight_check.py`)
+### 3.4 Static AST Docking Linker (`core/ast_docking_checker.py`)
 
-Every codebase commit must pass all verification tracks prior to completion:
+The AST Docking Linker verifies that implementation classes satisfy defined Protocol interfaces mechanically before deployment:
+
+```bash
+python -m core.ast_docking_checker --proto core/interfaces/evolutionary_engine_proto.py --impl core/evolutionary_engine.py --json
+# Output: {"is_docked": true, "defects": []}
+```
+
+- **Compile-Time Contract Validation**: Ensures method names, argument types, return types, and decorators match interface definitions without requiring dynamic imports.
+- **Fail-Fast Defense**: Rejects implementations with missing methods or signature drifts prior to dynamic test execution.
+
+---
+
+### 3.5 Deterministic Preflight Gatekeeper (`scripts/preflight_check.py`)
+
+Every codebase modification must clear all verification tracks prior to promotion:
 
 ```bash
 python scripts/preflight_check.py --quick
@@ -209,17 +260,15 @@ graph LR
 
 ---
 
-### 3.4 SCM Baseline & Lifecycle Governance
+### 3.6 SCM Baseline & Stop Hook Architecture Sync Guard (`scripts/guard_configuration_baseline.py`)
 
-Project Autopoiesis enforces strict configuration baseline immutability:
+To prevent architecture documentation from decaying into a dead specification, the Antigravity Stop Hook enforces mechanical synchronization between physical code and documentation:
 
-```bash
-# 1. Preflight Verification
-python scripts/preflight_check.py --quick
-
-# 2. Check Clean SCM Baseline
-python scripts/guard_configuration_baseline.py --check-only
-
-# 3. Emergency Revert (If Verification Fails)
-git checkout -- . && git clean -fd
-```
+1. **Architecture Sync Guard**:
+   - When any file in `core/` is created, modified, or deleted, `scripts/guard_configuration_baseline.py` inspects the working tree.
+   - If `core/` was modified but `docs/active/ARCHITECTURE.md` is absent from the changeset, the hook blocks turn conclusion with `decision="continue"` and directive:
+     `[ARCHITECTURE SYNC REQUIRED] Core modules were modified in this run, but docs/active/ARCHITECTURE.md was not updated. Mandatory Architecture Sync Invariant: You MUST review and reflect physical architecture changes in docs/active/ARCHITECTURE.md before concluding.`
+2. **Configuration Baseline Guard**:
+   - When no tasks are `IN_PROGRESS` and uncommitted changes exist, the hook blocks turn conclusion until the operator or agent commits the working tree (`git add . && git commit -m '...'`).
+3. **Fail-Open Operational Safety**:
+   - In the event of transient git timeouts or malformed hook payloads, the script fails open cleanly without crashing the developer environment.

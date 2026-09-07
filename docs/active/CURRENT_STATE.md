@@ -151,6 +151,7 @@ flowchart TD
         PRM_132["TASK-032: Rebuild Core 4 Agents as Sovereign Advisory Consultants (v1.0)"]
         PRM_133["TASK-033: Cortex Knowledge Purification and Shadow Grounding Engine (v1.0)"]
         PRM_134["TASK-034: Eliminate Redundant Built-in Duplicates & Purge Telemetry Collectors (v1.0)"]
+        PRM_135["TASK-035: Living Architecture Blueprint v4.0 & Stop Hook Architecture Sync Guard (v1.0)"]
     end
 
     ColPlanned -->|"Assign Available Slot"| ColActive
@@ -170,6 +171,7 @@ flowchart TD
 | **`TASK-031`** | Configuration Baseline and Run Completion Enforcement Hook | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Engineer | 46 companion tests pass (0.86s); Clean AST; Hook registered; Fail-open verified. |
 | **`TASK-033`** | Cortex Knowledge Purification and Shadow Grounding Engine | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Engineer | 11 companion tests pass (0.25s); 349 full tests pass; 174 spam purged; < 5ms SLA verified; Clean AST. |
 | **`TASK-034`** | Eliminate Redundant Built-in Duplicates & Purge Telemetry Collectors | `PROMOTED` | 0/2 | Tier 3 (Governance) | Sovereign Architect | Deleted 8 redundant files (grill-me, ACTIVE_CONTRACT, backprop, diagnostics); GEMINI.md v10.1; 0 defects. |
+| **`TASK-035`** | Living Architecture Blueprint v4.0 & Stop Hook Architecture Sync Guard | `PROMOTED` | 0/2 | Tier 2 (Code) | Sovereign Architect | 52 companion tests pass (0.89s); 296 full tests pass; ARCHITECTURE.md v4.0 living blueprint; Clean AST; Stop Hook verified. |
 
 ---
 

@@ -25,6 +25,13 @@ COMMIT_DIRECTIVE_MESSAGE = (
     "(git add . && git commit -m '...') before concluding the run."
 )
 
+ARCHITECTURE_SYNC_DIRECTIVE_MESSAGE = (
+    "[ARCHITECTURE SYNC REQUIRED] Core modules were modified in this run, "
+    "but docs/active/ARCHITECTURE.md was not updated. "
+    "Mandatory Architecture Sync Invariant: You MUST review and reflect "
+    "physical architecture changes in docs/active/ARCHITECTURE.md before concluding."
+)
+
 EPHEMERAL_PATTERNS: Tuple[str, ...] = (
     ".tmp",
     "__pycache__",
@@ -159,6 +166,27 @@ def _check_active_capacity_from_content(content: str) -> bool:
     return False
 
 
+
+def check_architecture_sync(
+    uncommitted: Tuple[str, ...],
+    arch_doc_path: str = "docs/active/ARCHITECTURE.md",
+) -> Tuple[bool, Optional[str]]:
+    """
+    Evaluates whether changes to core/ modules are accompanied by ARCHITECTURE.md synchronization.
+    Returns (is_synced, directive_explanation_if_unsynced).
+    """
+    has_core_changes = any(p.replace(chr(92), "/").startswith("core/") for p in uncommitted)
+    if not has_core_changes:
+        return True, None
+
+    normalized_arch = arch_doc_path.replace(chr(92), "/")
+    has_arch_update = any(p.replace(chr(92), "/") == normalized_arch for p in uncommitted)
+    if not has_arch_update:
+        return False, ARCHITECTURE_SYNC_DIRECTIVE_MESSAGE
+
+    return True, None
+
+
 def evaluate_baseline(
     repo_root: Path,
     ledger_path: Optional[Path] = None,
@@ -174,6 +202,16 @@ def evaluate_baseline(
         uncommitted = query_git_status(repo_root)
 
     is_clean = len(uncommitted) == 0
+
+    is_arch_synced, arch_msg = check_architecture_sync(uncommitted)
+    if not is_arch_synced:
+        return ConfigurationBaselineReport(
+            active_tasks=active_tasks,
+            uncommitted_files=uncommitted,
+            is_git_clean=is_clean,
+            decision="continue",
+            explanation=arch_msg,
+        )
 
     if has_active or is_clean:
         return ConfigurationBaselineReport(
@@ -191,6 +229,7 @@ def evaluate_baseline(
         decision="continue",
         explanation=COMMIT_DIRECTIVE_MESSAGE,
     )
+
 
 
 def _check_windows_pipe_readable(fileno: int) -> bool:

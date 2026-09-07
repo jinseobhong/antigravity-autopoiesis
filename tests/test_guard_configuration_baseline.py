@@ -24,11 +24,13 @@ from unittest import mock
 
 try:
     from scripts.guard_configuration_baseline import (
+        ARCHITECTURE_SYNC_DIRECTIVE_MESSAGE,
         COMMIT_DIRECTIVE_MESSAGE,
         EPHEMERAL_PATTERNS,
         ConfigurationBaselineReport,
         HookInvocationContext,
         build_cli_parser,
+        check_architecture_sync,
         evaluate_baseline,
         inspect_ledger_tasks,
         is_ephemeral_path,
@@ -41,11 +43,13 @@ try:
     )
 except ModuleNotFoundError:
     from sandbox.scripts.guard_configuration_baseline import (
+        ARCHITECTURE_SYNC_DIRECTIVE_MESSAGE,
         COMMIT_DIRECTIVE_MESSAGE,
         EPHEMERAL_PATTERNS,
         ConfigurationBaselineReport,
         HookInvocationContext,
         build_cli_parser,
+        check_architecture_sync,
         evaluate_baseline,
         inspect_ledger_tasks,
         is_ephemeral_path,
@@ -393,7 +397,7 @@ class TestBaselineEvaluationCore(unittest.TestCase):
         report = evaluate_baseline(
             repo_root=self.work_dir,
             ledger_path=self.idle_ledger,
-            uncommitted_override=("core/drift.py",),
+            uncommitted_override=("tests/drift.py",),
         )
         self.assertEqual(report.decision, "continue")
         self.assertEqual(report.is_git_clean, False)
@@ -408,7 +412,7 @@ class TestBaselineEvaluationCore(unittest.TestCase):
         report = evaluate_baseline(
             repo_root=self.work_dir,
             ledger_path=self.active_ledger,
-            uncommitted_override=("core/in_flight.py",),
+            uncommitted_override=("tests/in_flight.py",),
         )
         self.assertEqual(report.decision, "allow")
         self.assertEqual(report.active_tasks, ("TASK-031",))
@@ -430,7 +434,7 @@ class TestBaselineEvaluationCore(unittest.TestCase):
         report = evaluate_baseline(
             repo_root=self.work_dir,
             ledger_path=self.idle_ledger,
-            uncommitted_override=("core/a.py", "sandbox/b.py"),
+            uncommitted_override=("tests/a.py", "sandbox/b.py"),
         )
         self.assertEqual(report.decision, "continue")
         self.assertEqual(len(report.uncommitted_files), 2)
@@ -612,6 +616,81 @@ class TestGuardCLI(unittest.TestCase):
             check=False,
         )
         self.assertEqual(proc.returncode, 1)
+
+
+class TestArchitectureSyncGuard(unittest.TestCase):
+    """Evaluates mechanical Architecture Sync Guard enforcing ARCHITECTURE.md synchronization."""
+
+    def setUp(self) -> None:
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.work_dir = Path(self.temp_dir.name)
+        self.active_ledger = self.work_dir / "active_state.md"
+        self.active_ledger.write_text(
+            "# State\nActive Task Capacity: 1 of 5\n| **`TASK-035`** | Arch Sync | `IN_PROGRESS` |\n",
+            encoding="utf-8",
+        )
+        self.idle_ledger = self.work_dir / "idle_state.md"
+        self.idle_ledger.write_text(
+            "# State\nActive Task Capacity: 0 of 5\n| **`TASK-001`** | Init | `PROMOTED` |\n",
+            encoding="utf-8",
+        )
+
+    def tearDown(self) -> None:
+        self.temp_dir.cleanup()
+
+    def test_arch_sync_no_core_changes_allows(self) -> None:
+        """Positive test: Non-core changes (e.g. tests/, docs/specs/) bypass architecture sync."""
+        is_synced, msg = check_architecture_sync(("tests/test_foo.py", "docs/specs/bar.md"))
+        self.assertEqual(is_synced, True)
+        self.assertIsNone(msg)
+
+    def test_arch_sync_core_and_doc_modified_allows(self) -> None:
+        """Positive test: Modifying core/ accompanied by ARCHITECTURE.md satisfies sync check."""
+        is_synced, msg = check_architecture_sync((
+            "core/shadow_grounding.py",
+            "docs/active/ARCHITECTURE.md",
+        ))
+        self.assertEqual(is_synced, True)
+        self.assertIsNone(msg)
+
+    def test_negative_arch_sync_core_modified_without_arch_doc(self) -> None:
+        """Negative test: Modifying core/ without ARCHITECTURE.md triggers sync directive."""
+        is_synced, msg = check_architecture_sync(("core/shadow_grounding.py", "tests/test_shadow.py"))
+        self.assertEqual(is_synced, False)
+        self.assertEqual(msg, ARCHITECTURE_SYNC_DIRECTIVE_MESSAGE)
+        self.assertIn("[ARCHITECTURE SYNC REQUIRED]", str(msg))
+
+    def test_negative_arch_sync_blocks_stop_even_with_active_task(self) -> None:
+        """Negative test: Core modifications block turn completion even when a task is IN_PROGRESS."""
+        report = evaluate_baseline(
+            repo_root=self.work_dir,
+            ledger_path=self.active_ledger,
+            uncommitted_override=("core/evolutionary_engine.py",),
+        )
+        self.assertEqual(report.decision, "continue")
+        self.assertEqual(report.explanation, ARCHITECTURE_SYNC_DIRECTIVE_MESSAGE)
+        resp = report.to_hook_response()
+        self.assertEqual(resp.get("decision"), "continue")
+        self.assertIn("[ARCHITECTURE SYNC REQUIRED]", str(resp.get("reason")))
+
+    def test_arch_sync_permits_stop_when_arch_doc_present_with_active_task(self) -> None:
+        """Positive test: Core modifications permit turn stop if ARCHITECTURE.md is present."""
+        report = evaluate_baseline(
+            repo_root=self.work_dir,
+            ledger_path=self.active_ledger,
+            uncommitted_override=(
+                "core/evolutionary_engine.py",
+                "docs/active/ARCHITECTURE.md",
+            ),
+        )
+        self.assertEqual(report.decision, "allow")
+        self.assertEqual(report.to_hook_response(), {})
+
+    def test_negative_arch_sync_windows_path_delimiters_normalized(self) -> None:
+        """Negative test: Windows backslashes in paths are normalized and properly flagged."""
+        is_synced, msg = check_architecture_sync((r"core\submodule\feature.py",))
+        self.assertEqual(is_synced, False)
+        self.assertIn("[ARCHITECTURE SYNC REQUIRED]", str(msg))
 
 
 class TestHookGovernanceAndVerificationMatrix(unittest.TestCase):
