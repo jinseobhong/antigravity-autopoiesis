@@ -43,19 +43,12 @@ def _resolve_retry_paths() -> Tuple[Path, Path]:
     """Resolves interface protocol and implementation file paths."""
     proto_path = Path("core/interfaces/retry_policy_proto.py")
     impl_path = Path("core/retry_policy.py")
-    if not proto_path.exists():
-        proto_path = Path("sandbox/core/interfaces/retry_policy_proto.py")
-    if not impl_path.exists():
-        impl_path = Path("sandbox/core/retry_policy.py")
     return proto_path, impl_path
 
 
 def _run_retry_cli(args: List[str], timeout: int = 15) -> subprocess.CompletedProcess:
     """Executes retry policy CLI command in a bounded subprocess."""
     target_module = "core.retry_policy"
-    if not Path("core/retry_policy.py").exists() and Path("sandbox/core/retry_policy.py").exists():
-        target_module = "sandbox.core.retry_policy"
-
     cmd = [sys.executable, "-m", target_module] + args
     return subprocess.run(
         cmd,

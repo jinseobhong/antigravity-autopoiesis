@@ -190,11 +190,6 @@ class TestEvolutionaryEngineDockingAndProtocols(unittest.TestCase):
         """Positive test: Static AST docking between proto and impl evaluates to 0 defects."""
         proto_path = Path("core/interfaces/evolutionary_engine_proto.py")
         impl_path = Path("core/evolutionary_engine.py")
-        if not proto_path.exists():
-            proto_path = Path("sandbox/core/interfaces/evolutionary_engine_proto.py")
-        if not impl_path.exists():
-            impl_path = Path("sandbox/core/evolutionary_engine.py")
-
         report = verify_ast_docking(proto_path, impl_path)
         self.assertTrue(report.is_docked, f"AST Docking failed with defects: {report.defects}")
         self.assertEqual(len(report.defects), 0, "AST docking detected interface defects")
