@@ -5,10 +5,7 @@ role: subagent
 tools:
   - view_file
   - grep_search
-  - find_by_name
   - ask_question
-  - write_to_file
-  - run_command
   - send_message
 execution_bounds:
   timeout_seconds: 900

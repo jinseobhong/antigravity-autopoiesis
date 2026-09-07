@@ -38,9 +38,9 @@ When a mutant fails or is quarantined, the system must instantly generate a comp
 ### 2.2 Single-Keystroke Quarantine
 A developer must never be forced to perform manual git surgery, search through database rows, or modify configuration files to isolate a broken mutant.
 - Mandates first-class CLI ergonomics:
-  - `autopoiesis quarantine --id <mutant_id>`: Instantly isolates mutant and rolls back trunk.
-  - `autopoiesis promote --id <mutant_id>`: Promotes verified elite to trunk.
-  - `autopoiesis replay --id <mutant_id>`: Runs bit-identical deterministic execution locally.
+  - Quarantine: Instantly isolate broken mutant via `git checkout -- <file>` or cortex parking.
+  - Promote: Commit verified code to repository baseline.
+  - Replay: Run bit-identical deterministic execution locally via `python -m core.evolutionary_engine --generations N --pop N`.
 
 ### 2.3 Cryptographic Seed Determinism
 Every evolutionary run, mutation step, and test execution MUST be deterministically reproducible:
@@ -100,13 +100,13 @@ ightarrow$ [Mutant ID]
 - **One-Line Local Replay Command**:
   ```bash
     # Bit-identical deterministic replay
-    python -m core.agent_runner replay --id <mutant_id> --seed <seed_hash>
+    python -m core.evolutionary_engine --generations 5 --pop 10 --json
   ```
 - **Replay Determinism**: [100% Bit-Identical Verified | Non-deterministic drift detected]
 
 #### 4. Single-Keystroke CLI Actionability
-- **Quarantine Ergonomics**: `autopoiesis quarantine --id <mutant_id>` [Operational / Missing]
-- **Promotion Ergonomics**: `autopoiesis promote --id <mutant_id>` [Operational / Missing]
+- **Quarantine Ergonomics**: Deterministic rollback via `git checkout -- <target>`
+- **Promotion Ergonomics**: Preflight verified baseline commit
 - **Manual File Manipulation Required**: [NONE (1-click action) | Manual config editing detected]
 
 #### 5. Developer Experience Verdict

@@ -32,18 +32,18 @@ dependencies:
 
 ### 1.2 On-Call Incident Fast-Path (< 30 Seconds)
 **Severity Classification**: SEV-1 (Trunk Regression / Data Loss) | SEV-2 (Gate / Harness Deadlock)  
-**Triage Dashboard**: `https://monitoring.internal/antigravity/cortex`  
-**Escalation Channel**: Slack `#ops-oncall` | PagerDuty `ANTIGRAVITY-CORE-ONCALL`
+**Triage Diagnostic**: `python scripts/preflight_check.py --quick`  
+**Database Status**: `python -m core.cortex stats`
 
 > [!CAUTION]
-> **Production Protection Invariant**: Autonomous agents SHALL NOT apply unverified diffs directly to the production repository root.
+> **Production Protection Invariant**: Autonomous agents SHALL NOT modify repository files without passing preflight verification gates.
 
 | Incident Trigger | Impacted Subsystem | Immediate Diagnostic Command | Immediate Remediation Directive |
 | :--- | :--- | :--- | :--- |
-| **Corrupted Production State** | Repository Root (`.`) | `git status --porcelain` | `git apply -R --whitespace=fix sandbox/patch/${TASK_ID}.diff` |
-| **Hanging Test Harness (>10s)** | Warm Runner (`core.warm_runner`) | `python -m core.warm_runner --diagnose-hangs` | `python -m core.warm_runner --stop --force \|\| taskkill /F /PID <pid> /T` |
-| **State File Concurrency Lock** | Ledger (`docs/active/CURRENT_STATE.md`) | `python scripts/audit_blast_radius.py --diff-target HEAD` | `python -m core.state_manager retry-lock --file docs/active/CURRENT_STATE.md --backoff-ms 50 --max-retries 5` |
-| **Compliance Gate Rejection** | Quality Gates | `python scripts/compliance_checker.py` | `python scripts/compliance_checker.py --explain` |
+| **Corrupted Production State** | Repository Root (`.`) | `git status --porcelain` | `git checkout -- . && git clean -fd` |
+| **Preflight Gate Failure** | Quality Gates | `python scripts/preflight_check.py --verbose` | `python scripts/compliance_checker.py <failing_path>` |
+| **Database Concurrency Lock** | Cognitive Memory (`data/cortex.db`) | `python -m core.cortex stats` | Retry with exponential backoff or flush buffer |
+| **Compliance Gate Rejection** | Quality Gates | `python scripts/compliance_checker.py <path>` | Remediate reported AST defects |
 
 ---
 
@@ -142,12 +142,13 @@ flowchart TD
     end
 
     subgraph ColPromoted ["5. PROMOTED (Recent 5 Active Horizon)"]
-        PRM_ARCH["[TASK-001..026: Archived to cortex.db and docs/archived/]"]
+        PRM_ARCH["TASK-001..026: Archived to cortex.db and docs-archived"]
         PRM_127["TASK-027: Mechanical Interface Skeleton Baker and AST Docking Linker (v1.0)"]
         PRM_128["TASK-028: Dialectical Requirements Interrogator and Adversarial Red Team Engine (v1.0)"]
         PRM_129["TASK-029: Resilient Exponential Backoff Retry Policy Engine (v1.0)"]
         PRM_130["TASK-030: AI-Native Evolutionary Recombination Engine (v1.0)"]
-        PRM_131["TASK-031: Configuration Baseline and Run Completion Enforcement Hook (v1.0)"]    end
+        PRM_131["TASK-031: Configuration Baseline and Run Completion Enforcement Hook (v1.0)"]
+    end
 
     ColPlanned -->|"Assign Available Slot"| ColActive
     ColActive -->|"Pass Preflight Tiers"| ColVerified
@@ -268,7 +269,7 @@ timeline
 
 ### 7.1 Milestone Status Matrix
 1. **Milestone 1: Governance & Swarm Protocols** (`STATUS: COMPLETE`)
-   - Completed: `GEMINI.md`, `ARCHITECTURE.md`, `SUBAGENT_INVOCATION_GUIDE.md`.
+   - Completed: `GEMINI.md`, `ARCHITECTURE.md`.
 2. **Milestone 2: Quantitative Verification Engine** (`STATUS: COMPLETE`)
    - Completed: `scripts/compliance_checker.py`, `tests/test_compliance_checker.py` (22 tests passed).
 3. **Milestone 3: State Ledger & Promotion Protocol** (`STATUS: ACTIVE`)
@@ -321,28 +322,23 @@ This runbook defines the mandatory 4-phase protocol for promoting sandbox artifa
    VERDICT: APPROVED (100% Quantitative Compliance Passed)
    ```
 
-#### Step 4: Emergency Scoped Reverse-Patch Rollback
-Execute this rollback procedure immediately if Step 3 returns a non-zero exit code:
+#### Step 4: Emergency Rollback
+Execute this rollback procedure immediately if verification returns a non-zero exit code:
 
-1. **Scoped Reverse-Patch Execution**:
+1. **Working Tree Reversion**:
    ```bash
-   git apply -R --whitespace=fix sandbox/patch/${TASK_ID}.diff
+   git checkout -- . && git clean -fd
    ```
-   > [!CAUTION]
-   > **Sandbox Protection Constraint**: Engineers SHALL NOT execute blanket cleanup commands such as `git clean -fd`. Blanket cleanup deletes untracked sandbox experimentation files.
 
 2. **Rollback Verification Assertion**:
-   Verify that trunk files cleanly revert to baseline while untracked sandbox files remain intact:
+   Verify that repository files cleanly revert to baseline:
    ```bash
    git status --porcelain
-   # Expected Output: Zero modified trunk files; untracked sandbox files (?? sandbox/...) preserved.
+   # Expected Output: Clean working tree
    ```
 
-3. **Atomic Task Ledger Rollback Transaction**:
-   Following reverse-patch application, an atomic ledger transaction MUST transition the task status in `CURRENT_STATE.md` to `ROLLED_BACK`:
-   ```bash
-   python -m core.state_manager update-task --id ${TASK_ID} --status ROLLED_BACK --reason "Preflight verification failure post-promotion"
-   ```
+3. **Task Ledger Status Update**:
+   Update `CURRENT_STATE.md` atomically to reflect the rolled-back state.
 
 ---
 

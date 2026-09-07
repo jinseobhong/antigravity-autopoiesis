@@ -8,24 +8,24 @@ dependencies:
   - "GEMINI.md"
 ---
 
-# Antigravity Lean Cortex: Physical System Blueprint (ARCHITECTURE.md v2.0)
+# Antigravity Lean Cortex: Physical System Blueprint (ARCHITECTURE.md v3.0)
 
 > [!CAUTION]
-> ### 🚨 ON-CALL EMERGENCY TRIAGE (30-SECOND ACCESS)
-> **Active Dashboard**: `https://monitoring.internal/antigravity/cortex` | **On-Call Slack**: `#cortex-ops` | **PagerDuty**: `ANTIGRAVITY-CORE`
+> ### ON-CALL EMERGENCY TRIAGE (30-SECOND ACCESS)
+> **Primary Diagnostics**: `python scripts/preflight_check.py --quick` | **Database Status**: `python -m core.cortex stats`
 >
 > | Incident Symptom | Suspected Subsystem | Deterministic Health Check | Immediate Recovery Action |
 > | :--- | :--- | :--- | :--- |
-> | **SQLite Lock Contention** | `core/cortex.py` | `sqlite3 .agents/knowledge/cortex.db "PRAGMA busy_timeout;"` | `python scripts/cortex_admin.py --checkpoint-truncate` |
-> | **Test Runner Hung (>10s)** | `core/warm_runner.py` | `python -m core.warm_runner --diagnose-hangs` | `python -m core.warm_runner --kill-leaks --isolated` |
-> | **Preflight Gate Failure** | `scripts/preflight_check.py` | `python scripts/preflight_check.py --explain-failure` | `python scripts/preflight_check.py --fix-lint-auto` |
-> | **Corrupted Post-Promotion** | Sovereign Promotion | `git status --porcelain` | `git apply -R sandbox/patch/latest.diff || (git checkout -- . && git clean -fd)` |
+> | **SQLite Lock Contention** | `core/cortex.py` | `python -m core.cortex stats` | Retry with exponential backoff or flush spool buffer |
+> | **Test Suite Regression** | Test Suites | `python -m unittest discover tests/` | `git checkout -- tests/` |
+> | **Preflight Gate Failure** | Quality Gates | `python scripts/preflight_check.py --verbose` | `python scripts/compliance_checker.py <failing_path>` |
+> | **Corrupted Working Tree** | Repository Root (`.`) | `git status --porcelain` | `git checkout -- . && git clean -fd` |
 
 ---
 
 ## 1. Closed-Loop Physical Architecture Topology
 
-The Antigravity Lean Cortex platform operates as a deterministic, closed-loop cybernetic system where past operational memories actively ground planning, and verified solutions feed back into persistent storage.
+The Antigravity platform operates as a deterministic, closed-loop cybernetic system where past operational memories actively ground planning, and verified solutions feed back into persistent storage.
 
 ```mermaid
 graph TD
@@ -33,33 +33,54 @@ graph TD
         User["User / Human Architect"]
     end
 
-    subgraph OrchestratorEngine["Orchestrator & Planning Engine"]
-        DirectMode["Lean Direct Execution Engine (GEMINI.md)\n- In-process single-turn reasoning\n- SLA: sub-second prompt dispatch"]
+    subgraph OrchestratorEngine["Orchestrator & Execution Engine"]
+        DirectMode["Sovereign Orchestrator (GEMINI.md)
+- Primary direct authoring & execution
+- Subagents: 100% read-only review panels"]
     end
 
-    subgraph MemorySubsystem["Physical Cortex Subsystem (core/cortex.py)"]
-        Cortex["Cortex Storage Controller\n- Decayed LFU Cache\n- BM25 / FTS5 Token Retrieval"]
-        CortexDB[("SQLite WAL Database\n.agents/knowledge/cortex.db\n- busy_timeout=5000ms")]
+    subgraph MemorySubsystem["Cognitive Memory Subsystem (core/cortex.py)"]
+        Cortex["Cortex Storage Controller
+- Decayed LFU Cache
+- BM25 / FTS5 Token Retrieval"]
+        CortexDB[("SQLite WAL Database
+data/cortex.db
+- busy_timeout=5000ms")]
         Cortex -->|Reads / Writes| CortexDB
     end
 
-    subgraph ExecutionSubsystem["Confinement & Execution Subsystems"]
-        Sandbox["Sandbox Workspace\n./sandbox/\n- Ephemeral File Mutations"]
-        WorkerPool["Pre-Warmed Worker Daemon Pool\ncore/warm_runner.py\n- Process-isolated harness\n- Watchdog: 3.0s per test"]
-        Preflight["5-Tier Preflight Gatekeeper\nscripts/preflight_check.py\n- Tiers 1 through 5"]
-        PromotionEngine["Sovereign Promotion Engine\nscripts/promote.py\n- Unified Diff & Reverse Patch"]
+    subgraph EvolutionSubsystem["Evolutionary & Verification Engine"]
+        EvoEngine["Evolutionary Recombination Engine
+core/evolutionary_engine.py
+- Homologous AST crossover
+- Out-of-process watchdog"]
+        ASTCheck["AST Docking Linker
+core/ast_docking_checker.py
+- Static protocol contract closure"]
+        Preflight["Deterministic Preflight Gatekeeper
+scripts/preflight_check.py
+- Compliance, topology, and regression gates"]
     end
 
-    User -->|Prompts & Tokens| DirectMode
+    subgraph GovernanceSubsystem["Governance & SCM Enforcement"]
+        BaselineGuard["Configuration Baseline Guard
+scripts/guard_configuration_baseline.py
+- Stop hook mandatory commit check"]
+        IVVGuard["IV&V Pipeline Guard
+scripts/guard_ivv_pipeline.py
+- Read-only enforcement for subagents"]
+    end
+
+    User -->|Commands & Directives| DirectMode
     DirectMode -->|1. JIT Context Retrieval < 15ms| Cortex
     Cortex -.->|Past Anti-Patterns & Directives| DirectMode
-    DirectMode -->|2. Scaffolds Drafts| Sandbox
-    Sandbox -->|3. Test Invocation Request| WorkerPool
-    WorkerPool -->|4. Test Results & Coverage| Preflight
-    Preflight -->|5a. Gated Pass (Manifest & Diff)| PromotionEngine
-    Preflight -.->|5b. Write Verified Lesson / Failure Trace| Cortex
-    PromotionEngine -->|6. Awaiting Explicit Approval| User
-    PromotionEngine -->|7. Applied to Trunk| ProductionRoot[("Production Root (.)")]
+    DirectMode -->|2. Protocol Docking Verification| ASTCheck
+    DirectMode -->|3. Evolutionary Candidate Generation| EvoEngine
+    DirectMode -->|4. Automated Gate Verification| Preflight
+    DirectMode -->|5. SCM Hook Enforcement| BaselineGuard
+    DirectMode -->|6. Reviewer Permission Enforcement| IVVGuard
+    Preflight -.->|7. Telemetry & Defect Records| Cortex
+    DirectMode -->|8. Verified Commit to Repository| ProductionRoot[("Repository Root (.)")]
 ```
 
 ---
@@ -70,20 +91,20 @@ graph TD
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **`Orchestrator -> Cortex`** | Python In-Memory API | `query(symptom: str, top_k: int=3)` | `List[CortexRecord]` | `< 15ms` | Fallback to empty context (fail-open) |
 | **`Cortex -> SQLite`** | SQLite C-API (WAL Mode) | Prepared SQL Statement | Row cursor / Affected count | `< 5ms` (busy: 5000ms) | In-memory ring buffer spooling |
-| **`Sandbox -> WorkerPool`** | Named Pipe / Local IPC | `{"test_paths": [...], "env": {...}}` | `{"passed": int, "failed": int, "duration_ms": int}` | `10.0s max` | Hard `SIGKILL` on child; recycle daemon |
-| **`WorkerPool -> Preflight`** | JSON IPC Report | Full Test Execution Telemetry | Verification Audit Matrix | `30.0s max` | Gate rejection; locks promotion pipeline |
-| **`Preflight -> Cortex`** | Python Async / Event | `record(outcome, trigger, directive)` | `{"event_id": str, "status": "STORED"}` | `< 25ms` | Log warning; do not block promotion |
-| **`Promotion -> Root`** | Git Diff & Atomic Staging | `task_patch.diff` | Execution report + rollback script | `5.0s max` | Instant revert (`git checkout -- .`) |
+| **`EvoEngine -> Subprocess`** | OS Process Execution | Code string + Test harness | Execution telemetry (stdout/stderr/exit) | `3.0s max` | Subprocess timeout; candidate marked lethal |
+| **`Preflight -> QualityGates`** | Python In-Process API | Target paths + Test specs | Gate audit results (Pass/Fail) | `< 10.0s max` | Gate rejection; blocks task completion |
+| **`Preflight -> Cortex`** | Python In-Process API | `record(outcome, trigger, directive)` | `{"event_id": str, "status": "STORED"}` | `< 25ms` | Log warning; does not crash pipeline |
+| **`SCM Guard -> Git`** | Subprocess Execution | `git status --porcelain` | Status payload + commit directive | `< 5.0s max` | Intercepts turn stop if uncommitted changes exist |
 
 ---
 
 ## 3. Core Subsystems Specification
 
-### 3.1 Physical Cortex Memory Engine (`core/cortex.py`)
+### 3.1 Cognitive Memory Engine (`core/cortex.py`)
 
-The Cortex Memory Engine provides persistent semantic and episodic retrieval across agent context resets. Neurobiological metaphors are abandoned in favor of formal, deterministic **Decayed LFU (Least Frequently Used) Caching** combined with **SQLite FTS5 Full-Text Indexing**.
+The Cortex Memory Engine provides persistent semantic and episodic retrieval across agent context resets using **Decayed LFU (Least Frequently Used) Caching** combined with **SQLite FTS5 Full-Text Indexing**.
 
-#### Physical DDL Schema (`.agents/knowledge/cortex.db`)
+#### Physical DDL Schema (`data/cortex.db`)
 ```sql
 PRAGMA journal_mode = WAL;
 PRAGMA busy_timeout = 5000;
@@ -122,45 +143,52 @@ END;
 ```
 
 #### Recency Scoring & Retention Invariants
-Instead of metaphysical decay formulas, the recency weight degrades via a standard half-life formulation evaluated lazily upon access:
+The recency weight degrades via a standard half-life formulation evaluated lazily upon access:
 $$W(t) = W_0 \cdot 2^{-\Delta t / t_{\text{half}}} + \alpha \cdot \log(1 + f)$$
 - **Half-life ($t_{\text{half}}$)**: 168 hours (7 days).
 - **Frequency Bonus ($\alpha$)**: $0.15$.
-- **Eviction Threshold**: Rows where $W(t) < 0.05$ and $f < 3$ are vacuumed during weekly maintenance.
+- **Eviction Threshold**: Rows where $W(t) < 0.05$ and $f < 3$ are vacuumed during maintenance.
 
 ---
 
-### 3.2 Pre-Warmed Worker Daemon Pool (`core/warm_runner.py`)
+### 3.2 Out-of-Process Execution & Subprocess Watchdog Subsystem
 
-To eliminate the 50–200ms overhead of Windows `CreateProcessW` without compromising sandbox confinement, test suites execute inside a **persistent out-of-process worker daemon pool**:
+To eliminate risks of infinite loops, memory exhaustion, or interpreter segfaults during dynamic evaluation, all untrusted candidate evaluations execute inside **isolated subprocesses bounded by strict watchdog ceilings**:
 
 ```bash
-# Invocation Command
-python -m core.warm_runner --test-dir ./sandbox/tests --isolate --timeout-per-test 3.0 --json-report ./sandbox/test_report.json
+# Example Invocation via Evolutionary Engine CLI
+python -m core.evolutionary_engine --generations 5 --pop 10 --json
 ```
 
 #### Isolation & Anti-Pollution Invariants
-1. **Address Space Isolation**: Worker runs in a dedicated subprocess connected via IPC pipes. An unhandled `sys.exit()` or native C-segmentation fault terminates only the ephemeral worker, never the host orchestrator.
-2. **Watchdog Circuit Breaker**: Hard 3.0-second watchdog per test case. Infinite loops or blocked I/O trigger immediate `SIGKILL`.
-3. **State Rollback Protocol**: The worker resets `sys.modules` to a clean baseline snapshot between test modules and un-patches all mocked objects.
+1. **Address Space Isolation**: Candidate code runs in a dedicated Python subprocess via `subprocess.run()`. Unhandled exceptions, infinite recursion, or native segfaults terminate only the ephemeral child process.
+2. **Watchdog Circuit Breaker**: Hard 3.0-second watchdog ceiling per candidate execution. Infinite loops or blocked I/O trigger immediate `subprocess.TimeoutExpired` and mark the candidate as lethal (`is_lethal=True`).
+3. **Zero Host Pollution**: Candidate evaluations do not modify global interpreter state or shared modules.
 
 ---
 
-### 3.3 5-Tier Preflight Gatekeeper (`scripts/preflight_check.py`)
+### 3.3 Deterministic Preflight Gatekeeper (`scripts/preflight_check.py`)
 
-Every candidate change must pass all 5 verification tiers prior to promotion eligibility:
+Every codebase commit must pass all verification tracks prior to completion:
 
 ```bash
-python scripts/preflight_check.py --target-dir ./sandbox --strict
-# Exit Code: 0 (PASS) | 1 (Tier 1 Fail) | 2 (Tier 2 Fail) | 3 (Tier 3 Fail) | 4 (Tier 4 Fail) | 5 (Tier 5 Fail)
+python scripts/preflight_check.py --quick
+# Exit Code: 0 (PASS) | 1 (FAIL)
 ```
 
 ```mermaid
 graph LR
-    T1["Tier 1: Static Hygiene\n- Flake8 == 0\n- AST H-CODE-1..12\n- Doc Audit >= 90"] --> T2["Tier 2: Dynamic Rigor\n- 100% Tests Pass\n- >=30% Negative Assertions"]
-    T2 --> T3["Tier 3: Runtime Concurrency\n- Memory leak audit\n- File handle leak check\n- Thread leak audit"]
-    T3 --> T4["Tier 4: Blast Radius\n- Zero hardcoded secrets\n- No destructive schema drops\n- Clean import paths"]
-    T4 --> T5["Tier 5: Attestation\n- Unified Diff generation\n- Paired reverse patch\n- Cryptographic Hash Manifest"]
+    T1["Track A1: Static Compliance
+- AST H-CODE-1..12
+- Zero Syntax Defects"] --> T2["Track A2: Topology Check
+- Zero Rogue Files
+- Canonical Paths Only"]
+    T2 --> T3["Track B: Regression Rigor
+- 100% Tests Pass
+- >=30% Negative Assertions"]
+    T3 --> T4["Attestation
+- Exit Code 0
+- Clean Baseline"]
 ```
 
 #### AST Anti-Cheat Rule Reference (`H-CODE-1` through `H-CODE-12`)
@@ -168,7 +196,7 @@ graph LR
 | :--- | :--- | :--- | :--- |
 | `H-CODE-1` | No Lazy Stubs | `ast.Pass`, `ast.Constant(...)` | Allowed in `@abstractmethod`, `Protocol`, or commented exception suppresses |
 | `H-CODE-2` | No Tautological Asserts | `assert True`, `assert 1 == 1` | None |
-| `H-CODE-3` | Negative Test Ratio | Test functions evaluating `pytest.raises` or exception assertions | Must be >= 30% of total assertion count |
+| `H-CODE-3` | Negative Test Ratio | Test functions evaluating `assertRaises` or exception assertions | Must be >= 30% of total assertion count |
 | `H-CODE-4` | Cross-Platform I/O | `open(..., encoding='utf-8')`, `pathlib.Path` | None |
 | `H-CODE-5` | Secret Scanning | Regex entropy match on API keys / tokens | Local test fixtures in `tests/fixtures/` |
 | `H-CODE-6` | Bare Except Ban | `except:` or `except Exception: pass` | Must log or explicitly re-raise |
@@ -181,21 +209,17 @@ graph LR
 
 ---
 
-### 3.4 Sovereign Promotion & Rollback Engine (`scripts/promote.py`)
+### 3.4 SCM Baseline & Lifecycle Governance
 
-Promotion transfers verified changes from `./sandbox/` to the production root under explicit human authorization.
+Project Autopoiesis enforces strict configuration baseline immutability:
 
 ```bash
-# 1. Pre-Promotion Dry-Run (Zero Blast Radius)
-python scripts/promote.py --dry-run --patch sandbox/patch/task_101.diff
-# Expected Output: "PRE_PROMOTION_OK: Patch applies cleanly without merge conflicts."
+# 1. Preflight Verification
+python scripts/preflight_check.py --quick
 
-# 2. Atomic Promotion Execution
-python scripts/promote.py --execute --patch sandbox/patch/task_101.diff
+# 2. Check Clean SCM Baseline
+python scripts/guard_configuration_baseline.py --check-only
 
-# 3. Post-Promotion Verification
-python scripts/preflight_check.py --target-dir . --quick
-
-# 4. Instant Emergency Rollback (If Step 3 Fails)
-python scripts/promote.py --rollback --patch sandbox/patch/task_101.diff
+# 3. Emergency Revert (If Verification Fails)
+git checkout -- . && git clean -fd
 ```

@@ -4,15 +4,11 @@ description: Lead Technical Writer & Systems Information Architect authoring NAS
 role: primary # Operational mode: 'primary' (user-facing dialogue) or 'subagent' (background task)
 tools:
   - view_file
-  - write_to_file
-  - replace_file_content
   - grep_search
   - find_by_name
-  - run_command
 execution_bounds:
   timeout_seconds: 600
   workspace_mode: inherit
-  mainAgent: true
 ---
 
 # Lead Technical Writer & Systems Information Architect (v2.0)

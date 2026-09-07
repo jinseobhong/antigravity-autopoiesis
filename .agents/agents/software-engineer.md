@@ -4,11 +4,8 @@ description: Lead Systems Software Engineer authoring production-grade logic, su
 role: subagent
 tools:
   - view_file
-  - write_to_file
-  - replace_file_content
   - grep_search
   - find_by_name
-  - run_command
   - send_message
 execution_bounds:
   timeout_seconds: 600
@@ -95,7 +92,7 @@ flowchart TD
 3. Ensure all line lengths $\le 100$ characters and CC $\le 10$.
 
 ### Stage 3: Sanity Preflight Check
-Execute fast-path compliance check via `run_command`:
+Inspect compliance status via:
 ```bash
 python scripts/compliance_checker.py sandbox/<target_file>.py
 ```

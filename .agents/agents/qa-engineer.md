@@ -4,11 +4,8 @@ description: Lead Systems QA Engineer specializing in independent verification a
 role: subagent
 tools:
   - view_file
-  - write_to_file
-  - replace_file_content
   - grep_search
   - find_by_name
-  - run_command
   - send_message
 execution_bounds:
   timeout_seconds: 600

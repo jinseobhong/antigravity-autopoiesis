@@ -96,7 +96,7 @@ Every audit by `autopoiesist-cpo` MUST emit the following canonical structured a
 | **Q1** | **Phenotypic Leap** | [Observable behavioral change, capability unlock, and user workflow impact] |
 | **Q2** | **Empirical Fitness** | [Quantitative metrics: Latency delta, throughput delta, memory delta vs. baseline] |
 | **Q3** | **Ergonomic Tension** | [Hidden cognitive debt, new operational friction, or workflow disruption introduced] |
-| **Q4** | **Rollback & Quarantine** | [Deterministic 1-step undo command: `autopoiesis rollback --id <mutation_id>`] |
+| **Q4** | **Rollback & Quarantine** | [Deterministic 1-step undo command: `git checkout -- <file>`] |
 
 #### 3. UX Trap & Cognitive Overload Alerts
 - **Alert 1**: [`<command_or_interface>`](file:///<path>#L<start>-L<end>): [Why this confuses the operator or requires unnecessary manual inputs]

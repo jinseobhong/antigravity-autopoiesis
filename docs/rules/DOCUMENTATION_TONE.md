@@ -13,7 +13,7 @@ globs:
 > [!NOTE]
 > ### Document Scope & Automated Enforcement
 > This specification establishes mandatory linguistic, epistemic, and rhetorical standards for all technical architecture, specifications, decision records, and operational runbooks.
-> - **Automated Linter**: Vale CLI (`vale --config=.vale.ini docs/`)
+> - **Automated Linter**: `python scripts/compliance_checker.py <doc_path>`
 > - **CI Gate**: Blocking on `status: approved` documents; advisory warning on `status: draft`.
 > - **Emergency Break-Glass**: Append commit trailer `Doc-Waiver: INCIDENT-<id>` to bypass CI during P0 incidents.
 
@@ -141,52 +141,25 @@ All operational runbooks authored under this standard must isolate executable st
    ```
 4. **Emergency Rollback**:
    ```bash
-   python scripts/restore_cache_snapshot.py --target prod --snapshot latest
+   # Deterministic rollback command: git checkout -- <file>
    ```
 ```
 
 ---
 
-## 6. Automated CI Enforcement (Vale Configuration)
+## 6. Automated CI Enforcement (`scripts/compliance_checker.py`)
 
-To eliminate manual review bikeshedding, this specification is deterministically verified via the **Vale** linter engine.
+To eliminate manual review bikeshedding, documentation specifications are deterministically verified via the in-repository compliance auditor:
 
-### Configuration (`.vale.ini`)
-```ini
-StylesPath = .vale/styles
-MinAlertLevel = suggestion
-
-[*.md]
-BasedOnStyles = NASA
-
-NASA.BannedHandwaving = error
-NASA.NormativeModals = error
+```bash
+python scripts/compliance_checker.py <document_path>
+# Exit Code: 0 (PASS) | 1 (FAIL)
 ```
 
-### Style Rule (`.vale/styles/NASA/BannedHandwaving.yml`)
-```yaml
-extends: existence
-message: "NASA Tone Standard Violation: Unquantified term '%s'. Replace with empirical metric."
-level: error
-ignorecase: true
-tokens:
-  - seamless
-  - effortless
-  - blazing-fast
-  - lightning-fast
-  - infinitely scalable
-  - robust
-  - ultra-low latency
-  - easy to use
-```
-
-### Inline Waiver & Exemption Syntax
-When citing third-party vendor documentation or discussing legacy constraints, authors may suppress linter alerts using scoped inline comments:
-```markdown
-<!-- vale NASA.BannedHandwaving = NO -->
-The vendor marketing materials claim their cluster is "infinitely scalable".
-<!-- vale NASA.BannedHandwaving = YES -->
-```
+### Automated Checks
+1. **Banned Handwaving Scanner**: Rejects unquantified marketing adjectives (`seamless`, `effortless`, `blazing-fast`, `lightning-fast`, `infinitely scalable`, `robust`, `ultra-low latency`, `easy to use`).
+2. **Normative Directives Validator**: Enforces RFC 2119 and NASA SP-2016-6105 normative keyword usage.
+3. **Atomic Directives Verification**: Rejects compound normative actions joined by conjunctions.
 
 ---
 

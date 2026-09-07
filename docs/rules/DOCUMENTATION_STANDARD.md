@@ -221,7 +221,7 @@ last_reviewed: "{{YYYY-MM-DD}}"
 - **On-Call Contact**: Slack `#incident-response` | PagerDuty: `{{PAGERDUTY_SERVICE_KEY}}`
 - **Emergency Kill-Switch / Immediate Rollback**:
   ```bash
-  python scripts/emergency_kill_switch.py --target {{SERVICE_NAME}} --force
+  # Deterministic emergency remediation command
   ```
 
 ## 2. Containment & Diagnostic Verification
@@ -257,51 +257,16 @@ kubectl rollout undo deployment/{{SERVICE_NAME}} -n prod
 
 ---
 
-## 6. Automated Frontmatter Validation Script (`scripts/validate_doc_frontmatter.py`)
+## 6. Automated Document Pre-Approval Gate (`scripts/validate_doc_preapproval.py`)
 
-All documentation pull requests must pass the automated CI frontmatter verification gate:
+All documentation changes must pass the automated pre-approval verification gate:
 
-```python
-#!/usr/bin/env python3
-"""Deterministic Frontmatter & Provenance Validator."""
-import glob, sys, yaml, re
-
-FRONTMATTER_PATTERN = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
-VALID_STATUSES = {"DRAFT", "PROPOSED", "SPIKE", "ACCEPTED", "SUPERSEDED", "DEPRECATED"}
-REQUIRED_FIELDS = {"id", "title", "status", "owner", "last_reviewed"}
-
-EXCLUDE_PATTERNS = [".agents/**", "vendor/**", "*.generated.md"]
-target_files = []
-
-for pattern in ["docs/**/*.md", "specs/**/*.md", "architecture/**/*.md", "rfc/**/*.md"]:
-    for filepath in glob.glob(pattern, recursive=True):
-        if not any(re.search(ex.replace("**", ".*"), filepath) for ex in EXCLUDE_PATTERNS):
-            target_files.append(filepath)
-
-errors = []
-for filepath in target_files:
-    with open(filepath, "r", encoding="utf-8") as f:
-        content = f.read()
-    match = FRONTMATTER_PATTERN.match(content)
-    if not match:
-        errors.append(f"FAIL: {filepath} missing YAML frontmatter block '---'")
-        continue
-    try:
-        meta = yaml.safe_load(match.group(1)) or {}
-        missing = REQUIRED_FIELDS - set(meta.keys())
-        if missing:
-            errors.append(f"FAIL: {filepath} missing required fields: {sorted(missing)}")
-        if meta.get("status") not in VALID_STATUSES:
-            errors.append(f"FAIL: {filepath} invalid status '{meta.get('status')}'. Allowed: {sorted(VALID_STATUSES)}")
-        if meta.get("status") == "SUPERSEDED" and not meta.get("superseded_by"):
-            errors.append(f"FAIL: {filepath} marked SUPERSEDED but lacks 'superseded_by' target ID")
-    except Exception as exc:
-        errors.append(f"FAIL: {filepath} YAML syntax parse error: {exc}")
-
-if errors:
-    print(f"Schema Validation Failed with {len(errors)} error(s):\n" + "\n".join(errors), file=sys.stderr)
-    sys.exit(1)
-
-print(f"SUCCESS: Validated {len(target_files)} documents against provenance standard.")
-sys.exit(0)
+```bash
+python scripts/validate_doc_preapproval.py <target_files...>
+# Exit Code: 0 (PASS) | 1 (FAIL)
 ```
+
+The gate deterministically verifies:
+1. YAML frontmatter presence and schema conformance (`id`, `title`, `status`, `owner`, `last_reviewed`).
+2. Single top-level `# ` heading format.
+3. NASA tone standard compliance and absence of banned marketing handwaving adjectives.

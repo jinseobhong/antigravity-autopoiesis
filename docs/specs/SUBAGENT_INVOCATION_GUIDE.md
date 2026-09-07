@@ -5,12 +5,14 @@ status: "ACCEPTED"
 owner: "Platform Architecture Team"
 last_reviewed: "2026-09-07"
 dependencies:
+  - "GEMINI.md"
+  - "docs/specs/AGENT_REGISTRY.md"
 ---
 
-# Subagent Invocation and Orchestration Specification (v2.2)
+# Subagent Invocation and Orchestration Specification (v3.0)
 
 This specification establishes the official registration directory, naming conventions, invocation
-mechanisms, and operational invariants for all 10 specialized agent personas and their orchestrators in
+mechanisms, and operational invariants for all specialized agent personas and reviewer panels in
 Antigravity.
 
 ---
@@ -19,77 +21,53 @@ Antigravity.
 
 | Subagent Identifier | Target Domain | Invocation Role & Core Mandate |
 | :--- | :--- | :--- |
-| **`software-engineer`** | Code / Systems | Authors minimal production-grade code satisfying contracts under IV&V. |
-| **`qa-engineer`** | Code / QA & IV&V | Authors independent adversarial test suites, boundary tests, and defect hunting. |
-| **`socratic-interviewer`** | Requirements / Architecture | Conducts Socratic requirement elicitation interviews and authors binding active contracts. |
-| **`technical-writer`** | Docs / Architecture | Authors NASA-grade technical specifications, ADRs, RFCs, and operational runbooks. |
-| **`technical-reviewer-architecture`** | Code / Architecture | Audits domain abstraction honesty, value objects, ubiquitous language, and anti-speculative YAGNI. |
-| **`technical-reviewer-resilience`** | Code / Systems | Audits concurrency races, resource disposal, unstated environmental assumptions, and error voids. |
-| **`technical-reviewer-ergonomics`** | Code / Readability | Audits cognitive load, narrative flow, nesting depth, mutation transparency, and on-call ergonomics. |
-| **`documentation-reviewer-completeness`** | Technical Specs | Audits what is NOT written: missing failure modes, unstated assumptions, security and rollback gaps. |
-| **`documentation-reviewer-dialectic`** | Technical Specs | Audits logical integrity, dialectical trade-off honesty, confirmation bias, and hidden costs. |
-| **`documentation-reviewer-usability`** | Runbooks / Ops | Audits operational actionability, command ambiguity, mistake-proofing, and runbook safety. |
+| **`software-engineer`** | Code / Architecture | Qualitative code implementation review and structural audit. |
+| **`qa-engineer`** | QA / Verification | Qualitative test strategy review and test matrix gap analysis. |
+| **`socratic-interviewer`** | Requirements / Architecture | Conducts Socratic requirement elicitation interviews to resolve ambiguity. |
+| **`technical-writer`** | Docs / Specifications | Qualitative documentation review, NASA tone conformance, and structural auditing. |
+| **`technical-reviewer-architecture`** | Code / Architecture | Audits domain abstraction honesty, value objects, and anti-speculative YAGNI. |
+| **`technical-reviewer-resilience`** | Code / Systems | Audits concurrency races, resource disposal, and failure containment. |
+| **`technical-reviewer-ergonomics`** | Code / Readability | Audits cognitive load, narrative flow, nesting depth, and on-call ergonomics. |
+| **`documentation-reviewer-completeness`** | Technical Specs | Audits missing failure modes, unstated assumptions, and rollback gaps. |
+| **`documentation-reviewer-dialectic`** | Technical Specs | Audits logical integrity, dialectical trade-off honesty, and hidden costs. |
+| **`documentation-reviewer-usability`** | Runbooks / Ops | Audits operational actionability, command ambiguity, and runbook safety. |
 
 ---
 
 ## 2. Invocation Mechanisms
 
-### Method 1: Automated Parallel Dispatcher Skills (Recommended)
-Rather than manually coordinating individual reviewers, operators and orchestrator agents SHOULD invoke
-the high-level dispatcher skills:
-- **`implement`**: Dispatches modular `software-engineer` workers and dual `qa-engineer` verifiers in `sandbox/`.
+### Method 1: Sovereign Direct Execution (Primary Orchestrator)
+The Primary Orchestrator is the sole author and executor in the repository. Production source code,
+test suites, and documentation modifications are authored directly in-process by the primary agent
+to eliminate multi-agent coordination latency and token inflation.
+
+### Method 2: High-Level Reviewer Dispatcher Skills (Recommended)
+For qualitative multi-perspective reviews, the primary orchestrator invokes high-level dispatcher skills:
 - **`review-implementation`**: Concurrently dispatches all 3 technical reviewers (`architecture`, `resilience`, `ergonomics`) via `Workspace: 'inherit'`.
-- **`write-document`**: Dispatches `technical-writer` with pre-approval lint gating.
 - **`review-documentation`**: Concurrently dispatches all 3 doc reviewers (`completeness`, `dialectic`, `usability`) via `Workspace: 'inherit'`.
+- **`autopoiesists`**: Concurrently dispatches the 9 specialized Autopoiesist perspectives.
 - **`grill-me`**: Dispatches `socratic-interviewer` for requirements elicitation.
 
-### Method 2: Standalone Subprocess Runner (`core.agent_runner`)
-Run any agent out-of-process in an isolated worker process with watchdog timeout enforcement:
-```bash
-# Run software engineer standalone
-python -m core.agent_runner run --agent software-engineer
-
-# Run QA engineer standalone
-python -m core.agent_runner run --agent qa-engineer
-
-# Run 3-reviewer parallel panel
-python -m core.agent_runner panel --type code --target core/fs_topology.py
-```
-
-### Method 3: Programmatic Invocation via `invoke_subagent`
-Supervisors and workflow runners SHALL invoke subagents using the bounded `invoke_subagent` schema.
-For modular parallel execution, multiple workers are dispatched simultaneously:
+### Method 3: Programmatic Invocation via `invoke_subagent` (Read-Only Review Panels)
+Supervisors and workflow runners SHALL invoke subagents using the bounded `invoke_subagent` schema
+strictly for read-only analysis:
 
 ```json
 {
   "Subagents": [
     {
-      "TypeName": "software-engineer",
-      "Role": "Lead Systems Software Engineer (Storage)",
+      "TypeName": "technical-reviewer-architecture",
+      "Role": "Domain Abstraction Reviewer",
       "Model": "inherit",
       "Workspace": "inherit",
-      "Prompt": "Implement Storage module in sandbox/core/storage.py --caller-id: <CALLER_ID>"
+      "Prompt": "Audit domain abstraction honesty in core/evolutionary_engine.py --caller-id: <CALLER_ID>"
     },
     {
-      "TypeName": "software-engineer",
-      "Role": "Lead Systems Software Engineer (Engine)",
+      "TypeName": "technical-reviewer-resilience",
+      "Role": "Evolutionary Resilience Reviewer",
       "Model": "inherit",
       "Workspace": "inherit",
-      "Prompt": "Implement Engine module in sandbox/core/engine.py --caller-id: <CALLER_ID>"
-    },
-    {
-      "TypeName": "qa-engineer",
-      "Role": "Lead Systems QA Engineer (Functional)",
-      "Model": "inherit",
-      "Workspace": "inherit",
-      "Prompt": "Synthesize functional tests in sandbox/tests/test_functional.py --caller-id: <CALLER_ID>"
-    },
-    {
-      "TypeName": "qa-engineer",
-      "Role": "Lead Systems QA Engineer (Adversarial)",
-      "Model": "inherit",
-      "Workspace": "inherit",
-      "Prompt": "Synthesize adversarial tests in sandbox/tests/test_adversarial.py --caller-id: <CALLER_ID>"
+      "Prompt": "Audit concurrency safety and resource cleanup in core/evolutionary_engine.py --caller-id: <CALLER_ID>"
     }
   ]
 }
@@ -99,20 +77,16 @@ For modular parallel execution, multiple workers are dispatched simultaneously:
 
 ## 3. Operational Invariants
 
-- **[REQ-INV-01] Tool Permission Boundary**: Qualitative review subagents **SHALL NOT** be granted write
-  permissions (`enable_write_tools: false`). Mutating agents (`software-engineer`, `qa-engineer`,
-  `technical-writer`, `socratic-interviewer`) have targeted write permissions restricted to their domains.
-- **[REQ-INV-02] Workspace Mode Calibration**:
-  - Subagents **SHALL** execute within shared workspaces (`Workspace: 'inherit'`) to guarantee that
-    authored artifacts in `./sandbox/` persist across conversational turns.
-  - Ephemeral branch workspaces (`Workspace: 'branch'`) **SHALL NOT** be used for persistent code or docs.
+- **[REQ-INV-01] Read-Only Subagent Boundary**: Subagents **SHALL NOT** possess filesystem mutation
+  privileges. All file write and command execution attempts by subagents are intercepted and blocked
+  by `scripts/guard_ivv_pipeline.py`.
+- **[REQ-INV-02] Shared Workspace Calibration**: Subagents **SHALL** execute within shared workspaces
+  (`Workspace: 'inherit'`) to read workspace files without duplicating disk storage.
 - **[REQ-INV-03] Coordinate Citation Mandate**: Review subagents **SHALL** anchor every defect finding with
   exact line coordinate links (`file:///<path>#L<start>-L<end>`) and verbatim code/text excerpts.
 - **[REQ-INV-04] IPC Callback Relay**: Subagents dispatched programmatically **SHALL** relay their
   synthesized findings directly back to the caller via `send_message(Recipient='<caller_id>')` before
   concluding their turn.
-- **[REQ-INV-05] Sandbox Confinement**: Implementation subagents **SHALL** write new/candidate files
-  strictly within `./sandbox/`. Direct root mutations are strictly forbidden.
-- **DO**: Run Tier 1 quantitative compliance (`python scripts/compliance_checker.py <target>`) before
+- **DO**: Run quantitative compliance (`python scripts/compliance_checker.py <target>`) before
   invoking review subagents.
-- **DON'T**: Perform large implementations directly in the primary orchestrator context.
+- **DON'T**: Grant mutating file write permissions to subagents.

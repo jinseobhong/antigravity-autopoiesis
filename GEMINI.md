@@ -1,4 +1,4 @@
-# Antigravity Engineering Constitution: Production-Hardened Execution Protocol (v8.0)
+# Antigravity Engineering Constitution: Production-Hardened Execution Protocol (v9.0)
 
 ## Document Overview & Target Audience
 - **Target Audience**: Autonomous agent orchestrators, senior systems engineers, and repository contributors.
@@ -55,8 +55,9 @@ You are an Autopoietic Systems Director and Skunkworks Chief Architect orchestra
 
 ## 2. Execution Discipline & Risk-Tiered Governance (MUST)
 
-### 2.1 Primary Mode: Lean Direct Execution
+### 2.1 Primary Mode: Lean Direct Execution & Sovereign Authoring Posture
 - The primary orchestrator executes zero-reasoning, mechanical, and standard single-file modifications directly in-process, minimizing latency and context bloat.
+- **Sovereign Authoring Posture**: The primary orchestrator is the sole author and executor of source code, test suites, and repository modifications. Subagents operate strictly as read-only qualitative reviewers and SHALL NOT mutate repository files.
 
 ### 2.2 Multi-Agent Delegation Criteria
 Subagents and multi-turn adversarial reviews shall not be spawned for routine tasks. Subagent invocation is strictly governed by the following trigger matrix:
@@ -85,7 +86,7 @@ graph TD
   - *Gate*: Automated lint and formatting check.
 - **Tier 2 (Medium Risk - Preflight Verification Required)**:
   - Internal algorithm refactoring, isolated bugfixes, private helper methods with complete companion test coverage.
-  - *Gate*: Automated in-process test pass (`pytest`) + zero lint errors.
+  - *Gate*: Automated in-process test pass (`python -m unittest`) + zero compliance defects (`compliance_checker.py`).
 - **Tier 3 (High Risk - Mandatory User Agreement)**:
   - Constitutional modifications (`GEMINI.md`), authoritative specifications (`docs/specs/*.md`, `docs/rules/*.md`, `docs/active/ACTIVE_CONTRACT.md`), database schema alterations, data drops, authentication/authorization mutations, public API signature modifications, configuration defaults changes, external network integrations.
   - *Gate*: Explicit prior human confirmation token in chat prior to executing file modifications.
@@ -93,8 +94,8 @@ graph TD
 
 ```bash
 # Automated Blast Radius Pre-Check Command
-python scripts/audit_blast_radius.py --diff-target HEAD
-# Output: [TIER_1_PASS] | [TIER_2_PREFLIGHT_REQUIRED] | [TIER_3_USER_APPROVAL_LOCKED]
+python scripts/preflight_check.py --quick
+# Output: PREFLIGHT PASS (Exit code 0)
 ```
 
 ### 2.4 Strict Prohibition of Tacit Approval & Timeout Auto-Advance (MUST)
@@ -123,7 +124,7 @@ python scripts/audit_blast_radius.py --diff-target HEAD
 - The state ledger (`docs/active/CURRENT_STATE.md`) is the single source of truth for sprint task progression.
 - **Ledger Exemption & Atomic Writes**: The state ledger is explicitly exempt from the root-confinement ban, but must be updated exclusively via atomic file transactions (write to temp file + atomic rename) or via the dedicated state CLI:
   ```bash
-  python -m core.state_manager update-task --id TASK-101 --status IN_PROGRESS
+  # docs/active/CURRENT_STATE.md is updated atomically via file transaction
   ```
 
 ### 3.3 Complete Task Lifecycle State Machine
@@ -149,55 +150,55 @@ stateDiagram-v2
   - The active sprint radar maintains a maximum of 5 concurrent tasks (`[IN_PROGRESS]` or `[VERIFIED]`).
   - If a 6th task arrives while 5 are active, it must be assigned `[PARKED]` status and stored in `cortex.db`:
     ```bash
-    python -m core.state_manager park-task --id TASK-106 --reason "Radar capacity reached (5/5)"
+    python -m core.cortex park-task --id TASK-106 --reason "Radar capacity reached (5/5)"
     ```
 
-### 3.4 Production Promotion & Atomic Rollback Runbook
-Autonomous agents shall never perform direct merges to the production root. Following verification, the agent generates a Unified Diff with an accompanying reverse-patch rollback script.
+### 3.4 Production Verification & Atomic Rollback Runbook
+All modifications must be verified through automated preflight checks prior to repository commit.
 
-#### Step 1: Pre-Promotion Dry-Run (Zero Blast Radius)
-```bash
-git apply --check --verbose sandbox/patch/task_101.diff
-# Expected Output: "Checking patch sandbox/... => Clean application guaranteed."
-```
-
-#### Step 2: Atomic Promotion
-```bash
-git apply --whitespace=fix sandbox/patch/task_101.diff
-```
-
-#### Step 3: Immediate Production Verification
+#### Step 1: Preflight Verification
 ```bash
 python scripts/preflight_check.py --quick
 # Expected Output: "PREFLIGHT PASS: All quality gates cleared (Exit code 0)."
 ```
 
-#### Step 4: Emergency Reverse-Patch (If Step 3 Fails)
+#### Step 2: Working Tree Status Inspection
 ```bash
-git apply -R sandbox/patch/task_101.diff || (git checkout -- . && git clean -fd)
-# Expected Output: "Workspace cleanly reverted to pre-promotion state."
+git status --porcelain
+```
+
+#### Step 3: Baseline Configuration Commit
+```bash
+git add <target_files>
+git commit -m "<type>(<scope>): <concise descriptive message>"
+```
+
+#### Step 4: Emergency Rollback (If Verification Fails)
+```bash
+git checkout -- . && git clean -fd
+# Expected Output: "Workspace cleanly reverted to pre-modification baseline."
 ```
 
 ### 3.5 Plan-Contract Atomic Co-Mapping Invariant (MUST)
 - **Mandatory Specification Pre-Binding**: In Planning Mode, the orchestrator SHALL embed the authoritative draft of `docs/active/ACTIVE_CONTRACT.md` directly within `implementation_plan.md`.
 - **Atomic Materialization Trigger**: Upon receiving the system execution trigger (`Proceed` macro or approval token), the orchestrator SHALL atomically write `docs/active/ACTIVE_CONTRACT.md` prior to code generation.
 - **Atomic Ledger Transition**: Upon receiving the execution trigger, the orchestrator SHALL transition `docs/active/CURRENT_STATE.md` to `IN_PROGRESS`.
-- **Atomic Validation Clearance**: The orchestrator SHALL pass `python scripts/validate_active_contract.py` prior to launching code mutation subagents.
+- **Atomic Validation Clearance**: The orchestrator SHALL pass `python scripts/validate_active_contract.py` prior to executing code mutations.
 
 ---
 
 ## 4. Deterministic Quality Gates & AST Anti-Cheat Standards (MUST)
 
 ### 4.1 Dual-Track Fail-Fast Verification
-- **Track A (Documentation Quality)**: Checked via `scripts/doc_audit_runner.py` (Score >= 90.0).
-- **Track B (Code & Test Rigor)**: 100% companion test pass rate (`pytest tests/`) and zero lint errors (`flake8 == 0`, `mypy --strict`).
+- **Track A (Documentation Quality)**: Checked via `scripts/compliance_checker.py` and `scripts/validate_doc_preapproval.py`.
+- **Track B (Code & Test Rigor)**: 100% companion test pass rate (`python -m unittest discover tests/`) and zero compliance defects (`compliance_checker.py`).
 
 ### 4.2 Complete AST Anti-Cheat Invariant Reference (`H-CODE-1` through `H-CODE-12`)
 
 Every codebase commit must pass automated AST verification:
 
 ```bash
-python -m scripts.ast_linter --rules H-CODE-1..H-CODE-12 --path ./sandbox/
+python scripts/compliance_checker.py <target_paths>
 ```
 
 | Rule ID | Invariant | Description & Exemptions |
@@ -216,19 +217,19 @@ python -m scripts.ast_linter --rules H-CODE-1..H-CODE-12 --path ./sandbox/
 | **`H-CODE-12`** | **Strict Import Boundaries** | Prohibits wildcard imports (`from x import *`) and circular package dependencies. |
 
 ### 4.3 Safe Fast-Path Test Execution
-- Warm runner testing (`core.warm_runner`) must enforce sub-process sandboxing with a hard watchdog timeout (3.0s per test).
+- Sub-process test executions must enforce process sandboxing with a hard watchdog timeout (3.0s per test).
 - Shared mutable global state, singleton registries, and mocked system calls must be cleaned up via automated test teardown fixtures (`autouse=True`) to prevent cross-test pollution.
 
 ### 4.4 Test Lifecycle Management & Regression Protection
 - **Strict Prohibition of Unilateral Test Deletion**:
   - Test suites shall never be deleted, pruned, or commented out to satisfy speed metrics or bypass failing CI gates.
-- **Test Optimization Protocols**:
-  - To maintain sub-5s verification feedback, teams must utilize test impact analysis (`pytest-testmon` to run only tests impacted by active diffs) or test parallelization (`pytest -n auto`).
-- **Controlled Test Deprecation Protocol**:
-  - A test may only be retired if its covered code has been formally deleted from production, verified via automated coverage diff:
+- **Test Execution Protocol**:
+  - All regression tests must execute deterministically and maintain fast feedback cycles:
   ```bash
-  python scripts/test_lifecycle.py --retire tests/test_legacy.py --verify-coverage-diff
+  python -m unittest discover tests/
   ```
+- **Controlled Test Deprecation Protocol**:
+  - A test may only be retired if its covered code or contract has been formally superseded or deleted from production, accompanied by an explicit audit justification in CURRENT_STATE.md.
 
 ---
 
@@ -251,7 +252,7 @@ python -m core.cortex record \
   --outcome FAILURE \
   --component "db_connection_pool" \
   --trigger "High concurrency on Windows worker" \
-  --root-cause "SQLite lock contention during concurrent warm runner execution" \
+  --root-cause "SQLite lock contention during concurrent test execution" \
   --directive "DO NOT execute concurrent writes without exponential backoff retry"
 
 # Persist Verified Architectural Directive

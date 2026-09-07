@@ -76,10 +76,11 @@ watchdog timeout budgets, and dispatch skills for all 10 registered personas:
 
 | Agent Identifier | Tier | Target Domain | Mutating Privilege | Watchdog Timeout | Declared Tool Bindings | Primary Dispatch Skill |
 | :--- | :---: | :--- | :---: | :---: | :--- | :--- |
-| **`software-engineer`** | P0 | Code / Systems | `Mutating (Sandbox)` | 600s | `view_file`, `write_to_file`, `replace_file_content`, `grep_search`, `find_by_name`, `run_command`, `send_message` | `implement` |
-| **`qa-engineer`** | P0 | Code / QA & IV&V | `Mutating (Sandbox)` | 600s | `view_file`, `write_to_file`, `replace_file_content`, `grep_search`, `find_by_name`, `run_command`, `send_message` | `implement` |
-| **`socratic-interviewer`** | P0 | Requirements / Contracts | `Mutating (Active)` | 900s | `view_file`, `grep_search`, `find_by_name`, `ask_question`, `write_to_file`, `run_command`, `send_message` | `grill-me` |
-| **`technical-writer`** | P2 | Docs / Specifications | `Mutating (Sandbox)` | 600s | `view_file`, `write_to_file`, `replace_file_content`, `grep_search`, `find_by_name`, `run_command` | `write-document` |
+| **`Primary Orchestrator`** | P0 | All Domains | `Mutating (Sovereign)` | N/A | Full Tool Access (Sole Writer) | Direct Execution |
+| **`software-engineer`** | P1 | Code / Systems Review | `Read-Only` | 300s | `view_file`, `grep_search`, `send_message` | `review-implementation` |
+| **`qa-engineer`** | P1 | QA & Verification Review | `Read-Only` | 300s | `view_file`, `grep_search`, `send_message` | `review-implementation` |
+| **`socratic-interviewer`** | P1 | Requirements / Contracts | `Read-Only` | 300s | `view_file`, `grep_search`, `ask_question`, `send_message` | `grill-me` |
+| **`technical-writer`** | P1 | Docs / Architecture | `Read-Only` | 300s | `view_file`, `grep_search`, `send_message` | `review-documentation` |
 | **`technical-reviewer-architecture`** | P1 | Code / Domain Design | `Read-Only` | 300s | `view_file`, `grep_search`, `send_message` | `review-implementation` |
 | **`technical-reviewer-resilience`** | P1 | Code / Concurrency & I/O | `Read-Only` | 300s | `view_file`, `grep_search`, `send_message` | `review-implementation` |
 | **`technical-reviewer-ergonomics`** | P1 | Code / Cognitive Load | `Read-Only` | 300s | `view_file`, `grep_search`, `send_message` | `review-implementation` |
@@ -151,10 +152,7 @@ sequenceDiagram
 - **Modular Parallel Mode**: Supports concurrent dispatch across decoupled modules bound by frozen `protocols.py`.
 - **Confinement Invariant**: All new files and experimental code MUST reside inside `./sandbox/`.
 - **Quality Mandate**: Enforces CC $\le 10$, nesting depth $\le 3$, and strict KISS/YAGNI principles.
-- **Standalone Subprocess Invocation**:
-  ```bash
-  python -m core.agent_runner run --agent software-engineer --target sandbox/core/worker.py
-  ```
+- **Invocation Mechanism**: Dispatched via Antigravity `invoke_subagent` for read-only qualitative review.
 
 ### 4.2 `qa-engineer` (Lead Systems QA Engineer & Adversarial Verifier)
 - **Primary Mandate**: Authors independent, contract-breaking unit and integration test suites.
@@ -163,76 +161,49 @@ sequenceDiagram
   - **Adversarial QA**: Tests failure paths, timeout watchdogs, file lock contention, and bad input handling.
 - **IV&V Invariant**: Operates independently from `software-engineer` directly from `ACTIVE_CONTRACT.md`.
 - **Negative Ratio Mandate**: Maintains $\ge 40\%$ negative assertions evaluating edge cases and exceptions (`H-CODE-3`).
-- **Standalone Subprocess Invocation**:
-  ```bash
-  python -m core.agent_runner run --agent qa-engineer --target sandbox/tests/test_worker.py
-  ```
+- **Invocation Mechanism**: Dispatched via Antigravity `invoke_subagent` for read-only qualitative review.
 
 ### 4.3 `socratic-interviewer` (Socratic Requirements Architect)
 - **Primary Mandate**: Explores ambiguous problem domains through multi-turn interrogation, formulating binding contracts.
 - **Fail-Closed Invariant**: Enforces `[INV-GRILL-07]` (Silence Is Not Consent); missing responses quarantine to `ON_HOLD`.
 - **Target Artifact**: Authors `docs/active/ACTIVE_CONTRACT.md`.
-- **Standalone Subprocess Invocation**:
-  ```bash
-  python -m core.agent_runner run --agent socratic-interviewer
-  ```
+- **Invocation Mechanism**: Dispatched via Antigravity `invoke_subagent` for read-only qualitative review.
 
 ### 4.4 `technical-writer` (Lead Technical Writer & Information Architect)
 - **Primary Mandate**: Authors NASA-grade technical specifications, architectural blueprints, ADRs, and operational runbooks.
 - **Normative Invariant**: Uses strict normative keywords (`SHALL`, `SHALL NOT`, `MUST`, `DO`, `DON'T`).
 - **Quality Gate**: Clears `validate_doc_preapproval.py` with 0 defects before handoff.
-- **Standalone Subprocess Invocation**:
-  ```bash
-  python -m core.agent_runner run --agent technical-writer --target docs/specs/NEW_SPEC.md
-  ```
+- **Invocation Mechanism**: Dispatched via Antigravity `invoke_subagent` for read-only qualitative review.
 
 ### 4.5 `technical-reviewer-architecture` (Domain Abstraction Reviewer)
 - **Primary Mandate**: Audits domain abstraction honesty, value objects, ubiquitous language, and speculative over-engineering.
 - **Panel Participation**: Member of `--type code` review panel.
-- **Standalone Subprocess Invocation**:
-  ```bash
-  python -m core.agent_runner run --agent technical-reviewer-architecture --target core/fs_topology.py
-  ```
+- **Invocation Mechanism**: Dispatched via Antigravity `invoke_subagent` for read-only qualitative review.
 
 ### 4.6 `technical-reviewer-resilience` (Evolutionary Resilience Reviewer)
 - **Primary Mandate**: Audits concurrency hazards, resource leaks, error containment, and unstated environmental assumptions.
 - **Panel Participation**: Member of `--type code` review panel.
-- **Standalone Subprocess Invocation**:
-  ```bash
-  python -m core.agent_runner run --agent technical-reviewer-resilience --target core/fs_topology.py
-  ```
+- **Invocation Mechanism**: Dispatched via Antigravity `invoke_subagent` for read-only qualitative review.
 
 ### 4.7 `technical-reviewer-ergonomics` (Cognitive Ergonomics Reviewer)
 - **Primary Mandate**: Audits cognitive load, on-call comprehension, SLAP conformance, and nesting depth $\le 3$.
 - **Panel Participation**: Member of `--type code` review panel.
-- **Standalone Subprocess Invocation**:
-  ```bash
-  python -m core.agent_runner run --agent technical-reviewer-ergonomics --target core/fs_topology.py
-  ```
+- **Invocation Mechanism**: Dispatched via Antigravity `invoke_subagent` for read-only qualitative review.
 
 ### 4.8 `documentation-reviewer-completeness` (Specification Completeness Reviewer)
 - **Primary Mandate**: Exposes unstated assumptions, missing failure states, rollback gaps, and security voids.
 - **Panel Participation**: Member of `--type doc` review panel.
-- **Standalone Subprocess Invocation**:
-  ```bash
-  python -m core.agent_runner run --agent documentation-reviewer-completeness --target docs/active/CURRENT_STATE.md
-  ```
+- **Invocation Mechanism**: Dispatched via Antigravity `invoke_subagent` for read-only qualitative review.
 
 ### 4.9 `documentation-reviewer-dialectic` (Dialectical Logic Reviewer)
 - **Primary Mandate**: Audits logical integrity, self-rationalization, trade-off honesty, and causal validity.
 - **Panel Participation**: Member of `--type doc` review panel.
-- **Standalone Subprocess Invocation**:
-  ```bash
-  python -m core.agent_runner run --agent documentation-reviewer-dialectic --target docs/active/CURRENT_STATE.md
-  ```
+- **Invocation Mechanism**: Dispatched via Antigravity `invoke_subagent` for read-only qualitative review.
 
 ### 4.10 `documentation-reviewer-usability` (Operational Usability Reviewer)
 - **Primary Mandate**: Audits operational actionability, command ambiguity, mistake-proofing, and high-stress runbook safety.
 - **Panel Participation**: Member of `--type doc` review panel.
-- **Standalone Subprocess Invocation**:
-  ```bash
-  python -m core.agent_runner run --agent documentation-reviewer-usability --target docs/active/CURRENT_STATE.md
-  ```
+- **Invocation Mechanism**: Dispatched via Antigravity `invoke_subagent` for read-only qualitative review.
 
 ---
 
@@ -257,7 +228,7 @@ Technical directives and system invariants are defined below conforming to NASA 
   frozen type protocols in `types.py` or `protocols.py` prior to dispatching concurrent implementation workers.
 
 ### 5.2 Mandatory Engineering Actions
-- **`DO`**: Verify all 10 personas using `python -m core.agent_runner list` prior to dispatching multi-agent workflows.
+- **`DO`**: Verify all agent persona manifests using `python scripts/compliance_checker.py .agents/agents/*.md`.
 - **`DO`**: Freeze `protocols.py` before fan-out worker dispatch on Tier 3 modular tasks.
 - **`DO`**: Execute `python scripts/compliance_checker.py docs/specs/AGENT_REGISTRY.md` upon any registry modification.
 - **`DON'T`**: Merge candidate code to production without passing the independent QA test harness.
