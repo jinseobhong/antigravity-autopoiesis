@@ -14,7 +14,7 @@
         <p class="text-xs text-[var(--muted-foreground)]">Project Autopoiesis Autonomous Architecture HUD</p>
       </div>
       <div class="text-right">
-        <span class="text-[10px] font-mono text-[var(--muted-foreground)]">2026-09-07T10:51:00</span>
+        <span class="text-[10px] font-mono text-[var(--muted-foreground)]">2026-09-07T10:52:05</span>
       </div>
     </div>
 
@@ -51,11 +51,11 @@
         </div>
         <div class="p-3 rounded-lg border border-[var(--border)] bg-[var(--content)]">
           <div class="text-xs text-[var(--muted-foreground)]">Last Commit</div>
-          <div class="text-lg font-semibold font-mono text-[var(--foreground)]">e6cb27b</div>
+          <div class="text-lg font-semibold font-mono text-[var(--foreground)]">f6c0ed1</div>
         </div>
       </div>
       <div class="p-3 rounded-lg border border-[var(--border)] bg-[var(--content)] text-xs">
-        <span class="font-medium text-[var(--foreground)]">Commit Subject:</span> refactor(core): purge zombie runners, abolish physical sandbox, and unify under git working tree (TASK-040)
+        <span class="font-medium text-[var(--foreground)]">Commit Subject:</span> feat(hud): implement 4-layer cognitive HUD generative UI and telemetry generator (TASK-041)
       </div>
     </div>
     
@@ -199,47 +199,12 @@
       <div class="p-3 rounded-lg border border-[var(--border)] bg-[var(--content)]">
         <div class="text-xs font-semibold text-[var(--foreground)] mb-1">Git Diff Stat & Line Changes</div>
         <pre class="font-mono text-[11px] p-2.5 rounded bg-black/30 overflow-x-auto whitespace-pre">
-GEMINI.md                                          |  11 +-
- core/__init__.py                                   |  48 +-
- core/agent_runner.py                               | 754 ---------------------
- core/cortex.py                                     |  71 +-
- core/cortex_knowledge.py                           |  35 +-
- core/dialectical_extractor.py                      |  22 +-
- core/evolutionary_engine.py                        |  54 +-
- core/retry_policy.py                               |  20 +-
- core/shadow_grounding.py                           |  20 +-
- core/state_compactor.py                            |  23 +-
- core/test_engine/__init__.py                       |  24 -
- core/test_engine/contracts.py                      | 108 ---
- core/test_engine/engine.py                         | 246 -------
- core/test_engine/worker.py                         | 148 ----
- core/warm_runner.py                                | 125 ----
- core/warm_runner_types.py                          |  20 -
- core/warm_runner_worker.py                         |  17 -
- docs/active/CURRENT_STATE.md                       |  10 +-
- .../validate_doc_preapproval.cpython-312.pyc       | Bin 11150 -&gt; 10879 bytes
- scripts/guard_configuration_baseline.py            |   7 +-
- scripts/migrate_memory_document_split.py           |  23 +-
- scripts/preflight_check.py                         |   8 +-
- scripts/validate_doc_preapproval.py                |   8 +-
- .../test_compliance_checker.cpython-312.pyc        | Bin 18123 -&gt; 17964 bytes
- .../test_validate_doc_preapproval.cpython-312.pyc  | Bin 5212 -&gt; 5055 bytes
- tests/test_ast_docking_checker.py                  |  30 +-
- tests/test_compliance_checker.py                   |  23 +-
- tests/test_cortex_concurrency.py                   |   8 +-
- tests/test_cortex_docs.py                          |  20 +-
- tests/test_cortex_eviction.py                      |  23 +-
- tests/test_cortex_knowledge.py                     |  66 +-
- tests/test_cortex_restore.py                       |  23 +-
- tests/test_evolutionary_engine.py                  |  72 +-
- tests/test_guard_configuration_baseline.py         |  68 +-
- tests/test_guard_ivv_pipeline.py                   |   6 +-
- tests/test_preflight_check.py                      |  32 +-
- tests/test_retry_policy.py                         |  48 +-
- tests/test_skeleton_baker.py                       |  38 +-
- tests/test_state_compactor.py                      |  32 +-
- tests/test_validate_doc_preapproval.py             |  17 +-
- 40 files changed, 247 insertions(+), 2061 deletions(-)</pre>
+core/cognitive_hud.py                  | 433 +++++++++++++++++++++++++++++++++
+ core/interfaces/cognitive_hud_proto.py | 105 ++++++++
+ docs/active/CURRENT_STATE.md           |  10 +-
+ docs/active/cognitive_hud.html         | 268 ++++++++++++++++++++
+ tests/test_cognitive_hud.py            | 196 +++++++++++++++
+ 5 files changed, 1006 insertions(+), 6 deletions(-)</pre>
       </div>
       <div class="text-[11px] text-[var(--muted-foreground)] text-right font-mono">
         Status: All quality gates cleared; 329 tests passed.

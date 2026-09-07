@@ -150,11 +150,6 @@ flowchart TD
 
     subgraph ColPromoted ["5. PROMOTED (Recent 5 Active Horizon)"]
         PRM_ARCH["TASK-001..035: Archived to document.db (state_revisions)"]
-        PRM_131["TASK-031: Configuration Baseline and Run Completion Enforcement Hook (v1.0)"]
-        PRM_132["TASK-032: Rebuild Core 4 Agents as Sovereign Advisory Consultants (v1.0)"]
-        PRM_133["TASK-033: Cortex Knowledge Purification and Shadow Grounding Engine (v1.0)"]
-        PRM_134["TASK-034: Eliminate Redundant Built-in Duplicates & Purge Telemetry Collectors (v1.0)"]
-        PRM_135["TASK-035: Living Architecture Blueprint v4.0 & Stop Hook Architecture Sync Guard (v1.0)"]
         PRM_136["TASK-036: State Ledger Rolling Compactor, Cortex Snapshot Engine & Stop Hook Compaction Guard (v1.0)"]
         PRM_137["TASK-037: Memory-Document Physical Split and Seed Hydration Pipeline (v1.0)"]
         PRM_139["TASK-039: Stop Hook Preflight Verification Hardening & Fast/Full Calibration (v1.0)"]
@@ -171,7 +166,7 @@ flowchart TD
 
 | Task ID | Task Description | Lifecycle Status | Retries [Used/Max] | Blast Radius Tier | Owner | Verification Gate |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| *`TASK-001..035`* | *Archived to document.db (state_revisions snapshot)* | `ARCHIVED` | - | Multiple | Platform Team | 100% CI pass; Trunk merged; Knowledge persisted | | `ARCHIVED` | - | Multiple | Platform Team | 100% CI pass; Trunk merged; Knowledge persisted |
+| *`TASK-001..035`* | *Archived to document.db (state_revisions snapshot)* | `ARCHIVED` | - | Multiple | Platform Team | 100% CI pass; Trunk merged; Knowledge persisted |
 | **`TASK-036`** | State Ledger Rolling Compactor, Cortex Snapshot Engine & Stop Hook Compaction Guard | `PROMOTED` | 0/2 | Tier 2 (Code) | Sovereign Architect | 11 compactor tests pass (0.26s); 56 baseline tests pass; Snapshot in document.db; Clean AST; Compaction verified. |
 | **`TASK-037`** | Memory-Document Physical Split and Seed Hydration Pipeline | `PROMOTED` | 0/2 | Tier 2 (Code) | Sovereign Architect | 9 companion tests pass (1.20s); 320 full tests pass; 100% SHA-256 parity; Seed auto-hydration verified (<50ms). |
 | **`TASK-039`** | Stop Hook Preflight Verification Hardening & Fast/Full Calibration | `PROMOTED` | 0/2 | Tier 2 (Code) | Sovereign Architect | 63 companion tests pass (2.46s); 329 full tests pass; Clean AST; Preflight Stop Guard verified. |
