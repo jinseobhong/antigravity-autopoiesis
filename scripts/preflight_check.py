@@ -30,11 +30,9 @@ for root in _CANDIDATE_ROOTS:
 try:
     from scripts.compliance_checker import audit_file, _collect_target_files
     from core.fs_topology import audit_filesystem_topology
-    from core.defect_diagnostics import ingest_preflight_defects, record_preflight_resolution
 except ModuleNotFoundError:
     from sandbox.scripts.compliance_checker import audit_file, _collect_target_files
     from sandbox.core.fs_topology import audit_filesystem_topology
-    from sandbox.core.defect_diagnostics import ingest_preflight_defects, record_preflight_resolution
 
 
 @dataclass(frozen=True)
@@ -202,17 +200,8 @@ def _handle_preflight_telemetry(
     no_telemetry: bool = False,
     db_path: Optional[Path] = None,
 ) -> None:
-    """Dispatches defect ingestion or resolution tracking to defect_diagnostics."""
-    if no_telemetry:
-        return
-    cleared_components = ["compliance_checker", "fs_topology", "test_engine"]
-    try:
-        if not report.passed:
-            ingest_preflight_defects(report.diagnostics, db_path=db_path)
-        else:
-            record_preflight_resolution(cleared_components, db_path=db_path)
-    except (OSError, RuntimeError) as exc:
-        sys.stderr.write(f"[WARNING] Preflight telemetry failed: {exc}\n")
+    """Telemetry hook preserved as zero-op stub after collector deprecation."""
+    return None
 
 
 def main(argv: Optional[List[str]] = None) -> int:

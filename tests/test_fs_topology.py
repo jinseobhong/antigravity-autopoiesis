@@ -97,11 +97,10 @@ class TestFilesystemTopologyStandards(unittest.TestCase):
             Path("scripts/validate_doc_preapproval.py"),
             Path("scripts/compliance_checker.py"),
             Path("docs/active/CURRENT_STATE.md"),
-            Path("docs/active/ACTIVE_CONTRACT.md"),
             Path("docs/rules/CODING_CONVENTION.md"),
             Path("docs/archived/CONTRACT-20260907-cortex-domain-archiving.md"),
             Path(".agents/agents/socratic-interviewer.md"),
-            Path(".agents/skills/grill-me/SKILL.md"),
+            Path(".agents/skills/write-document/SKILL.md"),
             Path("tests/test_fs_topology.py"),
         ]
         for path in valid_samples:

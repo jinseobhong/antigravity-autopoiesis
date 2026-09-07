@@ -1,4 +1,4 @@
-# Antigravity Engineering Constitution: Production-Hardened Execution Protocol (v10.0)
+# Antigravity Engineering Constitution: Production-Hardened Execution Protocol (v10.1)
 
 ## Document Overview & Target Audience
 - **Target Audience**: Autonomous agent orchestrators, senior systems engineers, and repository contributors.
@@ -87,13 +87,13 @@ graph TD
 
 - **Tier 1 (Low Risk - Autonomous Execution)**:
   - Non-constitutional internal documentation updates, typing annotations, non-breaking additive companion tests, read-only inspections.
-  - *Exclusion*: Modifications to `GEMINI.md`, foundational rules (`docs/rules/*.md`), specs (`docs/specs/*.md`), and active contracts (`docs/active/*.md`) are strictly excluded from Tier 1.
+  - *Exclusion*: Modifications to `GEMINI.md`, foundational rules (`docs/rules/*.md`), specs (`docs/specs/*.md`), and specifications (`docs/specs/*.md`) are strictly excluded from Tier 1.
   - *Gate*: Automated lint and formatting check.
 - **Tier 2 (Medium Risk - Preflight Verification Required)**:
   - Internal algorithm refactoring, isolated bugfixes, private helper methods with complete companion test coverage.
   - *Gate*: Automated in-process test pass (`python -m unittest`) + zero compliance defects (`compliance_checker.py`).
 - **Tier 3 (High Risk - Mandatory User Agreement)**:
-  - Constitutional modifications (`GEMINI.md`), authoritative specifications (`docs/specs/*.md`, `docs/rules/*.md`, `docs/active/ACTIVE_CONTRACT.md`), database schema alterations, data drops, authentication/authorization mutations, public API signature modifications, configuration defaults changes, external network integrations.
+  - Constitutional modifications (`GEMINI.md`), authoritative specifications (`docs/specs/*.md`, `docs/rules/*.md`), database schema alterations, data drops, authentication/authorization mutations, public API signature modifications, configuration defaults changes, external network integrations.
   - *Gate*: Explicit prior human confirmation token in chat prior to executing file modifications.
   - *Post-Action Invariant*: Immediate post-execution report containing the complete, verbatim unified git diff (`git diff`).
 
@@ -184,11 +184,12 @@ git checkout -- . && git clean -fd
 # Expected Output: "Workspace cleanly reverted to pre-modification baseline."
 ```
 
-### 3.5 Plan-Contract Atomic Co-Mapping Invariant (MUST)
-- **Mandatory Specification Pre-Binding**: In Planning Mode, the orchestrator SHALL embed the authoritative draft of `docs/active/ACTIVE_CONTRACT.md` directly within `implementation_plan.md`.
-- **Atomic Materialization Trigger**: Upon receiving the system execution trigger (`Proceed` macro or approval token), the orchestrator SHALL atomically write `docs/active/ACTIVE_CONTRACT.md` prior to code generation.
-- **Atomic Ledger Transition**: Upon receiving the execution trigger, the orchestrator SHALL transition `docs/active/CURRENT_STATE.md` to `IN_PROGRESS`.
-- **Atomic Validation Clearance**: The orchestrator SHALL pass `python scripts/validate_active_contract.py` prior to executing code mutations.
+### 3.5 Native Planning Mode & Sovereign Approval Gate (MUST)
+- **Single Source of Truth**: In Planning Mode, `implementation_plan.md` functions as the sole authoritative engineering contract and binding specification.
+- **Explicit Operator Approval**: The orchestrator SHALL NOT mutate source code or execute disruptive operations until the human operator issues an explicit affirmative token or the `Proceed` macro on `implementation_plan.md`.
+- **Atomic Ledger Transition**: Upon receiving approval, the orchestrator SHALL transition `docs/active/CURRENT_STATE.md` to `IN_PROGRESS` prior to code generation.
+- **Walkthrough Closure**: Upon task completion, the orchestrator SHALL author `walkthrough.md` summarizing verification evidence.
+- **Promotion Invariant**: The orchestrator SHALL transition the completed task to `PROMOTED` in `CURRENT_STATE.md`.
 
 ---
 

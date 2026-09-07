@@ -298,25 +298,8 @@ def _dispatch_backpropagation(
     default_task_id: str,
     success: bool,
 ) -> Optional[Dict[str, Any]]:
-    """Dispatches backpropagate_gradient if backprop_gradient payload exists."""
-    if not backprop_data or not isinstance(backprop_data, dict):
-        return None
-    try:
-        from core.backprop_pipeline import BackpropPayload, backpropagate_gradient
-        payload = BackpropPayload(
-            task_id=backprop_data.get("task_id", default_task_id),
-            component=backprop_data.get("component", "agent_runner"),
-            invalidated_assumptions=backprop_data.get("invalidated_assumptions", []),
-            discovered_constraints=backprop_data.get("discovered_constraints", []),
-            applied_remedies=backprop_data.get("applied_remedies", []),
-            weight_deltas=backprop_data.get("weight_deltas", {}),
-            execution_success=backprop_data.get("execution_success", success),
-        )
-        res = backpropagate_gradient(payload)
-        return dict(res)
-    except Exception as bp_err:
-        sys.stderr.write(f"Backpropagation dispatch suppressed: {bp_err}\n")
-        return None
+    """Dispatches backpropagation if payload exists (no-op after pipeline simplification)."""
+    return None
 
 
 def _inject_grounding_directives(
