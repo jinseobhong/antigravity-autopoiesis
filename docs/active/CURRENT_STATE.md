@@ -157,6 +157,7 @@ flowchart TD
         PRM_135["TASK-035: Living Architecture Blueprint v4.0 & Stop Hook Architecture Sync Guard (v1.0)"]
         PRM_136["TASK-036: State Ledger Rolling Compactor, Cortex Snapshot Engine & Stop Hook Compaction Guard (v1.0)"]
         PRM_137["TASK-037: Memory-Document Physical Split and Seed Hydration Pipeline (v1.0)"]
+        PRM_139["TASK-039: Stop Hook Preflight Verification Hardening & Fast/Full Calibration (v1.0)"]
     end
 
     ColPlanned -->|"Assign Available Slot"| ColActive
@@ -175,6 +176,7 @@ flowchart TD
 | **`TASK-035`** | Living Architecture Blueprint v4.0 & Stop Hook Architecture Sync Guard | `PROMOTED` | 0/2 | Tier 2 (Code) | Sovereign Architect | 52 companion tests pass (0.89s); 296 full tests pass; ARCHITECTURE.md v4.0 living blueprint; Clean AST; Stop Hook verified. |
 | **`TASK-036`** | State Ledger Rolling Compactor, Cortex Snapshot Engine & Stop Hook Compaction Guard | `PROMOTED` | 0/2 | Tier 2 (Code) | Sovereign Architect | 11 compactor tests pass (0.26s); 56 baseline tests pass; Snapshot in document.db; Clean AST; Compaction verified. |
 | **`TASK-037`** | Memory-Document Physical Split and Seed Hydration Pipeline | `PROMOTED` | 0/2 | Tier 2 (Code) | Sovereign Architect | 9 companion tests pass (1.20s); 320 full tests pass; 100% SHA-256 parity; Seed auto-hydration verified (<50ms). |
+| **`TASK-039`** | Stop Hook Preflight Verification Hardening & Fast/Full Calibration | `PROMOTED` | 0/2 | Tier 2 (Code) | Sovereign Architect | 63 companion tests pass (2.46s); 329 full tests pass; Clean AST; Preflight Stop Guard verified. |
 
 ---
 

@@ -49,11 +49,13 @@ class PreflightReport:
     test_failures: int
     test_errors: int
     diagnostics: List[str]
+    mode: str = "full"
 
     def to_dict(self) -> Dict[str, Any]:
         """Serializes report to standard dictionary."""
         return {
             "passed": self.passed,
+            "mode": self.mode,
             "duration_ms": round(self.duration_ms, 2),
             "compliance": {
                 "files": self.compliance_files,
@@ -121,7 +123,7 @@ def _run_test_suite_gate(test_dir: str = "tests") -> Tuple[int, int, int, List[s
 
 def run_preflight(
     root_path: Optional[Path] = None,
-    quick: bool = True,
+    quick: bool = False,
 ) -> PreflightReport:
     """
     Executes full multi-track preflight verification pipeline.
@@ -130,7 +132,8 @@ def run_preflight(
     start_time = time.perf_counter()
     base_dir = root_path if root_path is not None else Path(".")
 
-    comp_files, comp_defects, comp_diag = _run_compliance_gate(str(base_dir))
+    target_scope = str(base_dir / "core") if quick and (base_dir / "core").is_dir() else str(base_dir)
+    comp_files, comp_defects, comp_diag = _run_compliance_gate(target_scope)
     topo_scanned, topo_violations, topo_diag = _run_topology_gate(base_dir)
     tests_run, test_fails, test_errs, test_diag = _run_test_suite_gate(str(base_dir / "tests"))
 
@@ -149,20 +152,22 @@ def run_preflight(
         test_failures=test_fails,
         test_errors=test_errs,
         diagnostics=all_diagnostics,
+        mode="quick" if quick else "full",
     )
 
 
 def _render_text_report(report: PreflightReport, verbose: bool = False) -> None:
     """Renders formatted preflight verification report."""
     duration_s = report.duration_ms / 1000.0
+    mode_label = "QUICK" if report.mode == "quick" else "FULL"
     print("=" * 80)
     if report.passed:
-        print(f"PREFLIGHT PASS: All quality gates cleared in {duration_s:.2f}s (Exit code 0).")
+        print(f"PREFLIGHT PASS [{mode_label}]: All quality gates cleared in {duration_s:.2f}s (Exit code 0).")
         print(f"- Track A1 (Static Compliance):    {report.compliance_files} files audited, 0 defects")
         print(f"- Track A2 (Filesystem Topology):  {report.topology_scanned} items scanned, 0 violations")
         print(f"- Track B  (Regression Rigor):     {report.tests_run} tests passed, 0 failures")
     else:
-        print(f"PREFLIGHT FAIL: Quality gates rejected in {duration_s:.2f}s (Exit code 1).")
+        print(f"PREFLIGHT FAIL [{mode_label}]: Quality gates rejected in {duration_s:.2f}s (Exit code 1).")
         print(f"- Static Compliance Defects:  {report.compliance_defects}")
         print(f"- Filesystem Violations:      {report.topology_violations}")
         print(f"- Regression Test Failures:   {report.test_failures + report.test_errors}")
@@ -182,8 +187,18 @@ def build_parser() -> argparse.ArgumentParser:
         prog="python scripts/preflight_check.py",
         description="Unified Preflight Verification Engine conforming to GEMINI.md Section 3.4.",
     )
-    parser.add_argument("--quick", action="store_true", default=True, help="Execute fast-path preflight (< 3.0s)")
-    parser.add_argument("--full", action="store_true", help="Execute complete deep preflight check")
+    parser.add_argument(
+        "--quick",
+        action="store_true",
+        default=True,
+        help="Execute fast-path preflight (< 3.0s, core/ targeted audit)",
+    )
+    parser.add_argument(
+        "--full",
+        action="store_true",
+        default=False,
+        help="Execute complete 100% deep preflight check across all files and tests",
+    )
     parser.add_argument("--verbose", "-v", action="store_true", help="Display verbose defect diagnostics")
     parser.add_argument("--json", action="store_true", help="Output results in JSON format")
     parser.add_argument("--root", type=str, default=".", help="Root directory path to verify")
@@ -210,7 +225,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     root_path = Path(args.root)
-    quick_mode = not args.full
+    quick_mode = args.quick and not args.full
     report = run_preflight(root_path=root_path, quick=quick_mode)
 
     if not args.no_telemetry:

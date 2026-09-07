@@ -39,6 +39,11 @@ STATE_COMPACTION_DIRECTIVE_MESSAGE = (
     "(python -m core.cortex compact-ledger) and snapshot to document.db before concluding."
 )
 
+PREFLIGHT_FAILED_DIRECTIVE_MESSAGE = (
+    "[PREFLIGHT VERIFICATION FAILED] Quality gates rejected: {summary}. "
+    "Mandatory Preflight Invariant: You MUST fix all test failures and compliance defects before concluding."
+)
+
 EPHEMERAL_PATTERNS: Tuple[str, ...] = (
     ".tmp",
     "__pycache__",
@@ -223,11 +228,52 @@ def check_state_compaction(
     return True, None
 
 
+def check_preflight_verification(
+    repo_root: Path,
+    runner: Optional[Any] = None,
+) -> Tuple[bool, Optional[str]]:
+    """
+    Evaluates whether full multi-track preflight verification passes for repo_root.
+    Returns (is_passed, directive_explanation_if_failed).
+    """
+    tests_dir = repo_root / "tests"
+    if not tests_dir.is_dir():
+        return True, None
+
+    try:
+        if runner is not None:
+            passed, diag = runner(repo_root)
+            if not passed:
+                msg = PREFLIGHT_FAILED_DIRECTIVE_MESSAGE.format(summary=diag)
+                return False, msg
+            return True, None
+
+        try:
+            from scripts.preflight_check import run_preflight
+        except ModuleNotFoundError:
+            from sandbox.scripts.preflight_check import run_preflight
+
+        report = run_preflight(root_path=repo_root, quick=False)
+        if not report.passed:
+            diag_str = (
+                f"{report.test_failures + report.test_errors} test failure(s), "
+                f"{report.compliance_defects} compliance defect(s), "
+                f"{report.topology_violations} topology violation(s)"
+            )
+            msg = PREFLIGHT_FAILED_DIRECTIVE_MESSAGE.format(summary=diag_str)
+            return False, msg
+        return True, None
+    except (OSError, RuntimeError, ImportError) as exc:
+        return False, f"[PREFLIGHT EXECUTION ERROR] Verification failed to execute: {exc}"
+
+
 def evaluate_baseline(
     repo_root: Path,
     ledger_path: Optional[Path] = None,
     uncommitted_override: Optional[Tuple[str, ...]] = None,
     compaction_threshold: int = 10,
+    check_preflight: bool = True,
+    preflight_runner: Optional[Any] = None,
 ) -> ConfigurationBaselineReport:
     """Evaluates git working tree and CURRENT_STATE.md to determine hook decision."""
     effective_ledger = ledger_path or (repo_root / "docs" / "active" / "CURRENT_STATE.md")
@@ -260,7 +306,7 @@ def evaluate_baseline(
             explanation=compact_msg,
         )
 
-    if has_active or is_clean:
+    if has_active:
         return ConfigurationBaselineReport(
             active_tasks=active_tasks,
             uncommitted_files=uncommitted,
@@ -269,12 +315,34 @@ def evaluate_baseline(
             explanation=None,
         )
 
+    if not is_clean:
+        return ConfigurationBaselineReport(
+            active_tasks=active_tasks,
+            uncommitted_files=uncommitted,
+            is_git_clean=False,
+            decision="continue",
+            explanation=COMMIT_DIRECTIVE_MESSAGE,
+        )
+
+    if check_preflight:
+        is_preflight_passed, preflight_msg = check_preflight_verification(
+            repo_root, runner=preflight_runner
+        )
+        if not is_preflight_passed:
+            return ConfigurationBaselineReport(
+                active_tasks=active_tasks,
+                uncommitted_files=uncommitted,
+                is_git_clean=is_clean,
+                decision="continue",
+                explanation=preflight_msg,
+            )
+
     return ConfigurationBaselineReport(
         active_tasks=active_tasks,
         uncommitted_files=uncommitted,
-        is_git_clean=False,
-        decision="continue",
-        explanation=COMMIT_DIRECTIVE_MESSAGE,
+        is_git_clean=True,
+        decision="allow",
+        explanation=None,
     )
 
 
@@ -382,6 +450,11 @@ def build_cli_parser() -> argparse.ArgumentParser:
         default=None,
         help="Override CURRENT_STATE.md ledger path",
     )
+    parser.add_argument(
+        "--skip-preflight",
+        action="store_true",
+        help="Skip running preflight verification",
+    )
     return parser
 
 
@@ -394,7 +467,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     repo_root = Path(args.repo_root).resolve() if args.repo_root else resolve_repo_root()
     ledger_path = Path(args.ledger).resolve() if args.ledger else None
 
-    report = evaluate_baseline(repo_root, ledger_path)
+    report = evaluate_baseline(
+        repo_root,
+        ledger_path,
+        check_preflight=not args.skip_preflight,
+    )
 
     if args.check_only:
         return 1 if report.decision == "continue" else 0

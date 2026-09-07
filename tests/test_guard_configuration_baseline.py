@@ -27,11 +27,13 @@ try:
         ARCHITECTURE_SYNC_DIRECTIVE_MESSAGE,
         COMMIT_DIRECTIVE_MESSAGE,
         EPHEMERAL_PATTERNS,
+        PREFLIGHT_FAILED_DIRECTIVE_MESSAGE,
         STATE_COMPACTION_DIRECTIVE_MESSAGE,
         ConfigurationBaselineReport,
         HookInvocationContext,
         build_cli_parser,
         check_architecture_sync,
+        check_preflight_verification,
         check_state_compaction,
         evaluate_baseline,
         inspect_ledger_tasks,
@@ -48,11 +50,13 @@ except ModuleNotFoundError:
         ARCHITECTURE_SYNC_DIRECTIVE_MESSAGE,
         COMMIT_DIRECTIVE_MESSAGE,
         EPHEMERAL_PATTERNS,
+        PREFLIGHT_FAILED_DIRECTIVE_MESSAGE,
         STATE_COMPACTION_DIRECTIVE_MESSAGE,
         ConfigurationBaselineReport,
         HookInvocationContext,
         build_cli_parser,
         check_architecture_sync,
+        check_preflight_verification,
         check_state_compaction,
         evaluate_baseline,
         inspect_ledger_tasks,
@@ -813,6 +817,90 @@ class TestHookGovernanceAndVerificationMatrix(unittest.TestCase):
             0.40,
             f"Negative assertion ratio {ratio:.2%} violates >= 40% adversarial standard (H-CODE-3)",
         )
+
+
+class TestConfigurationBaselinePreflight(unittest.TestCase):
+    """Evaluates Stop hook preflight verification integration and gating."""
+
+    def setUp(self) -> None:
+        self.temp_dir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.repo_dir = Path(self.temp_dir.name)
+        _init_git_repo(self.repo_dir, is_dirty=False)
+
+    def tearDown(self) -> None:
+        self.temp_dir.cleanup()
+
+    def test_check_preflight_no_tests_directory_passes(self) -> None:
+        """Positive test: When repo has no tests/ directory, preflight verification passes."""
+        passed, diag = check_preflight_verification(self.repo_dir)
+        self.assertTrue(passed)
+        self.assertIsNone(diag)
+
+    def test_check_preflight_with_custom_runner_success(self) -> None:
+        """Positive test: Custom passing preflight runner returns True."""
+        mock_runner = mock.MagicMock(return_value=(True, ""))
+        passed, diag = check_preflight_verification(self.repo_dir, runner=mock_runner)
+        self.assertTrue(passed)
+        self.assertIsNone(diag)
+
+    def test_evaluate_baseline_allows_when_preflight_passes(self) -> None:
+        """Positive test: evaluate_baseline allows stop when preflight runner succeeds."""
+        mock_runner = mock.MagicMock(return_value=(True, ""))
+        report = evaluate_baseline(
+            self.repo_dir,
+            check_preflight=True,
+            preflight_runner=mock_runner,
+        )
+        self.assertTrue(report.is_git_clean)
+        self.assertEqual(report.decision, "allow")
+        self.assertIsNone(report.explanation)
+
+    def test_negative_check_preflight_with_custom_runner_failure(self) -> None:
+        """Negative test: Custom failing preflight runner returns False with formatted message."""
+        mock_runner = mock.MagicMock(return_value=(False, "1 failure, 2 defects"))
+        (self.repo_dir / "tests").mkdir(parents=True, exist_ok=True)
+        passed, diag = check_preflight_verification(self.repo_dir, runner=mock_runner)
+        self.assertFalse(passed)
+        self.assertIsNotNone(diag)
+        self.assertIn("[PREFLIGHT VERIFICATION FAILED]", str(diag))
+        self.assertIn("1 failure, 2 defects", str(diag))
+
+    def test_negative_check_preflight_runner_exception_handling(self) -> None:
+        """Negative test: Preflight runner exception is handled fail-open/containment."""
+        mock_runner = mock.MagicMock(side_effect=RuntimeError("Subprocess timeout"))
+        (self.repo_dir / "tests").mkdir(parents=True, exist_ok=True)
+        passed, diag = check_preflight_verification(self.repo_dir, runner=mock_runner)
+        self.assertFalse(passed)
+        self.assertIsNotNone(diag)
+        self.assertIn("[PREFLIGHT EXECUTION ERROR]", str(diag))
+        self.assertIn("Subprocess timeout", str(diag))
+
+    def test_negative_evaluate_baseline_blocks_when_preflight_fails(self) -> None:
+        """Negative test: evaluate_baseline returns continue when preflight check fails."""
+        mock_runner = mock.MagicMock(return_value=(False, "3 test failures"))
+        (self.repo_dir / "tests").mkdir(parents=True, exist_ok=True)
+        report = evaluate_baseline(
+            self.repo_dir,
+            check_preflight=True,
+            preflight_runner=mock_runner,
+        )
+        self.assertTrue(report.is_git_clean)
+        self.assertEqual(report.decision, "continue")
+        self.assertIsNotNone(report.explanation)
+        self.assertIn("[PREFLIGHT VERIFICATION FAILED]", str(report.explanation))
+        self.assertIn("3 test failures", str(report.explanation))
+
+    def test_negative_evaluate_baseline_preflight_skip_flag(self) -> None:
+        """Negative test: When check_preflight is False, failing runner is bypassed."""
+        mock_runner = mock.MagicMock(return_value=(False, "Should be skipped"))
+        report = evaluate_baseline(
+            self.repo_dir,
+            check_preflight=False,
+            preflight_runner=mock_runner,
+        )
+        self.assertEqual(report.decision, "allow")
+        self.assertIsNone(report.explanation)
+        mock_runner.assert_not_called()
 
 
 if __name__ == "__main__":
