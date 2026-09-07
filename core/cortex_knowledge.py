@@ -24,17 +24,31 @@ try:
         DEFAULT_CORTEX_DB_PATH,
         DEFAULT_SPOOL_PATH,
         get_connection,
-        resolve_cortex_db_path,
         _spool_record,
+    )
+    from core.fs_topology import (
+        CanonicalPaths,
+        resolve_memory_db_path,
+        resolve_document_db_path,
+        resolve_cortex_db_path,
     )
 except ModuleNotFoundError:
     from sandbox.core.cortex_docs import (
         DEFAULT_CORTEX_DB_PATH,
         DEFAULT_SPOOL_PATH,
         get_connection,
-        resolve_cortex_db_path,
         _spool_record,
     )
+    from sandbox.core.fs_topology import (
+        CanonicalPaths,
+        resolve_memory_db_path,
+        resolve_document_db_path,
+        resolve_cortex_db_path,
+    )
+
+DEFAULT_MEMORY_DB_PATH: Path = CanonicalPaths.DATA_MEMORY_DB
+DEFAULT_MEMORY_SEED_PATH: Path = CanonicalPaths.DATA_MEMORY_SEED
+
 
 
 class EpisodicOutcome(str, Enum):
@@ -357,7 +371,7 @@ def record_event(
         "last_accessed_at": now_iso,
     }
 
-    target_db = resolve_cortex_db_path(db_path, check_exists=False)
+    target_db = resolve_memory_db_path(db_path, check_exists=False)
     spool_path = kwargs.get("spool_path")
     _persist_with_retry(target_db, record_dict, spool_path=spool_path)
 
@@ -469,7 +483,7 @@ def query_events(
     if limit <= 0:
         raise ValueError(f"Limit must be a positive integer, got {limit}")
 
-    target_db = resolve_cortex_db_path(db_path, check_exists=True)
+    target_db = resolve_memory_db_path(db_path, check_exists=True)
     if not target_db.exists():
         return []
 
@@ -584,7 +598,7 @@ def park_task(
     """Parks an overflow task in the cortex vault with backoff retry on lock contention."""
     _validate_park_inputs(task_id, title, reason)
 
-    target_db = resolve_cortex_db_path(db_path, check_exists=False)
+    target_db = resolve_memory_db_path(db_path, check_exists=False)
     now_iso = datetime.now(timezone.utc).isoformat()
     payload_dict = payload if payload is not None else {}
     payload_str = json.dumps(payload_dict, ensure_ascii=False, default=str)
@@ -616,7 +630,7 @@ def unpark_task(task_id: str, db_path: Optional[Path] = None) -> Optional[Parked
     if not task_id or not task_id.strip():
         raise ValueError("task_id must be a non-empty string.")
 
-    target_db = resolve_cortex_db_path(db_path, check_exists=True)
+    target_db = resolve_memory_db_path(db_path, check_exists=True)
     if not target_db.exists():
         return None
 
@@ -675,7 +689,7 @@ def list_parked_tasks(
     db_path: Optional[Path] = None,
 ) -> List[ParkedTaskRecord]:
     """Retrieves list of tasks from the cortex vault filtered by status."""
-    target_db = resolve_cortex_db_path(db_path, check_exists=True)
+    target_db = resolve_memory_db_path(db_path, check_exists=True)
     if not target_db.exists():
         return []
 
@@ -723,7 +737,7 @@ def vacuum_decay(
     Evaluates decayed weights across episodic events and purges rows
     falling below both min_weight and min_frequency thresholds atomically.
     """
-    target_db = resolve_cortex_db_path(db_path, check_exists=True)
+    target_db = resolve_memory_db_path(db_path, check_exists=True)
     if not target_db.exists():
         return 0
 
@@ -768,33 +782,160 @@ def _count_table(con: sqlite3.Connection, name: str, condition: str = "1=1") -> 
         return 0
 
 
-def get_cortex_stats(db_path: Optional[Path] = None) -> CortexStats:
+def get_cortex_stats(
+    db_path: Optional[Path] = None,
+    docs_db_path: Optional[Path] = None,
+) -> CortexStats:
     """Gathers summary statistics across all knowledge and document archive tables."""
-    target_db = resolve_cortex_db_path(db_path, check_exists=True)
-    if not target_db.exists():
+    mem_db = resolve_memory_db_path(db_path, check_exists=True)
+    doc_db = resolve_document_db_path(docs_db_path, check_exists=True)
+
+    if not mem_db.exists() and not doc_db.exists():
         return CortexStats.empty()
+
+    tot_events, succ_events, fail_events = 0, 0, 0
+    active_parked, tot_parked = 0, 0
+    c_revs, s_revs, a_revs = 0, 0, 0
+
+    if mem_db.exists():
+        con_mem = get_connection(mem_db)
+        try:
+            tot_events = _count_table(con_mem, "episodic_events")
+            succ_events = _count_table(con_mem, "episodic_events", "outcome = 'SUCCESS'")
+            fail_events = _count_table(con_mem, "episodic_events", "outcome = 'FAILURE'")
+            active_parked = _count_table(con_mem, "parked_tasks", "status = 'PARKED'")
+            tot_parked = _count_table(con_mem, "parked_tasks")
+            c_revs = _count_table(con_mem, "contract_revisions")
+            s_revs = _count_table(con_mem, "state_revisions")
+            a_revs = _count_table(con_mem, "architecture_revisions")
+        finally:
+            con_mem.close()
+
+    if doc_db.exists() and doc_db != mem_db:
+        con_doc = get_connection(doc_db)
+        try:
+            c_revs = _count_table(con_doc, "contract_revisions")
+            s_revs = _count_table(con_doc, "state_revisions")
+            a_revs = _count_table(con_doc, "architecture_revisions")
+        finally:
+            con_doc.close()
+
+    return CortexStats(
+        total_episodic_events=tot_events,
+        success_events=succ_events,
+        failure_events=fail_events,
+        active_parked_tasks=active_parked,
+        total_parked_tasks=tot_parked,
+        contract_revisions=c_revs,
+        state_revisions=s_revs,
+        architecture_revisions=a_revs,
+    )
+
+
+def export_memory_seed(
+    db_path: Optional[Path] = None,
+    seed_path: Optional[Path] = None,
+) -> int:
+    """
+    Exports episodic memory records to a deterministic, line-delimited JSONL seed file.
+    Conforms to [INV-SPLIT-04] and [INV-SPLIT-05].
+    """
+    target_db = resolve_memory_db_path(db_path, check_exists=True)
+    if not target_db.exists():
+        return 0
+
+    target_seed = Path(seed_path) if seed_path is not None else DEFAULT_MEMORY_SEED_PATH
+    target_seed.parent.mkdir(parents=True, exist_ok=True)
 
     con = get_connection(target_db)
     try:
-        tot_events = _count_table(con, "episodic_events")
-        succ_events = _count_table(con, "episodic_events", "outcome = 'SUCCESS'")
-        fail_events = _count_table(con, "episodic_events", "outcome = 'FAILURE'")
-        active_parked = _count_table(con, "parked_tasks", "status = 'PARKED'")
-        tot_parked = _count_table(con, "parked_tasks")
-
-        c_revs = _count_table(con, "contract_revisions")
-        s_revs = _count_table(con, "state_revisions")
-        a_revs = _count_table(con, "architecture_revisions")
-
-        return CortexStats(
-            total_episodic_events=tot_events,
-            success_events=succ_events,
-            failure_events=fail_events,
-            active_parked_tasks=active_parked,
-            total_parked_tasks=tot_parked,
-            contract_revisions=c_revs,
-            state_revisions=s_revs,
-            architecture_revisions=a_revs,
+        init_knowledge_tables(con)
+        cur = con.execute(
+            "SELECT id, outcome, component, trigger_tokens, root_cause, directive, "
+            "solution, validation, access_frequency, recency_weight, created_at, last_accessed_at "
+            "FROM episodic_events ORDER BY created_at ASC;"
         )
+        rows = cur.fetchall()
+        lines: List[str] = []
+        for r in rows:
+            entry = {
+                "id": r["id"],
+                "outcome": r["outcome"],
+                "component": r["component"],
+                "trigger_tokens": r["trigger_tokens"],
+                "root_cause": r["root_cause"],
+                "directive": r["directive"],
+                "solution": r["solution"],
+                "validation": r["validation"],
+                "access_frequency": r["access_frequency"],
+                "recency_weight": r["recency_weight"],
+                "created_at": r["created_at"],
+                "last_accessed_at": r["last_accessed_at"],
+            }
+            lines.append(json.dumps(entry, ensure_ascii=False))
+
+        with open(target_seed, "w", encoding="utf-8") as f:
+            for line in lines:
+                f.write(line + "\n")
+
+        return len(lines)
     finally:
         con.close()
+
+
+def hydrate_memory_from_seed(
+    seed_path: Optional[Path] = None,
+    db_path: Optional[Path] = None,
+) -> int:
+    """
+    Hydrates episodic events from JSONL seed into memory.db idempotently.
+    Conforms to [INV-SPLIT-04] and [INV-SPLIT-08].
+    """
+    target_seed = Path(seed_path) if seed_path is not None else DEFAULT_MEMORY_SEED_PATH
+    if not target_seed.exists():
+        return 0
+
+    target_db = resolve_memory_db_path(db_path, check_exists=False)
+    target_db.parent.mkdir(parents=True, exist_ok=True)
+
+    con = get_connection(target_db)
+    hydrated_count = 0
+    try:
+        init_knowledge_tables(con)
+        with open(target_seed, "r", encoding="utf-8") as f:
+            raw_lines = [line.strip() for line in f if line.strip()]
+
+        with con:
+            for line in raw_lines:
+                try:
+                    entry = json.loads(line)
+                    tuple_val = (
+                        entry["id"],
+                        entry["outcome"],
+                        entry["component"],
+                        entry["trigger_tokens"],
+                        entry.get("root_cause"),
+                        entry["directive"],
+                        entry.get("solution"),
+                        entry.get("validation"),
+                        entry.get("access_frequency", 1),
+                        entry.get("recency_weight", 1.0),
+                        entry["created_at"],
+                        entry["last_accessed_at"],
+                    )
+                    res = con.execute(
+                        "INSERT OR IGNORE INTO episodic_events ("
+                        "id, outcome, component, trigger_tokens, root_cause, "
+                        "directive, solution, validation, access_frequency, "
+                        "recency_weight, created_at, last_accessed_at"
+                        ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+                        tuple_val,
+                    )
+                    if res.rowcount > 0:
+                        hydrated_count += 1
+                except (json.JSONDecodeError, KeyError):
+                    continue
+        return hydrated_count
+    finally:
+        con.close()
+

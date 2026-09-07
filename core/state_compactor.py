@@ -193,6 +193,7 @@ def compact_state_ledger(
     threshold: int = 10,
     keep_recent: int = 5,
     db_path: Optional[Path] = None,
+    memory_db_path: Optional[Path] = None,
     force: bool = False,
 ) -> StateCompactionReport:
     """
@@ -208,7 +209,7 @@ def compact_state_ledger(
             keep_recent=keep_recent,
             pruned_count=0,
             retained_count=0,
-            explanation="Ledger file does not exist",
+            explanation=f"Ledger file does not exist: {ledger_path}",
         )
 
     content = ledger_path.read_text(encoding="utf-8")
@@ -226,7 +227,7 @@ def compact_state_ledger(
             explanation=f"Promoted task count ({total_count}) is below threshold ({threshold})",
         )
 
-    # 1. Snapshot full ledger to cortex.db
+    # 1. Snapshot full ledger to document.db
     rev = snapshot_state_ledger(
         ledger_path=ledger_path,
         db_path=db_path,
@@ -268,12 +269,12 @@ def compact_state_ledger(
         component="state_ledger",
         trigger_tokens=f"Promoted task count {total_count} >= threshold {threshold}",
         directive=(
-            f"Compacted state ledger to cortex.db snapshot ({rev.revision_id}) and "
+            f"Compacted state ledger to document.db snapshot ({rev.revision_id}) and "
             f"archived {len(to_prune)} tasks ({start_id}..{end_id}) to {archive_file.name}."
         ),
         solution=f"Pruned {len(to_prune)} tasks, retained recent {len(to_retain)} tasks.",
-        validation="100% token preservation; cortex.db synced",
-        db_path=db_path,
+        validation="100% token preservation; document.db synced",
+        db_path=memory_db_path if memory_db_path is not None else db_path,
     )
 
     # 5. Atomically update CURRENT_STATE.md

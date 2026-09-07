@@ -7,12 +7,16 @@ sandbox/
 data/*.db
 data/*.db-wal
 data/*.db-shm
+data/*.bak
 data/spool/
 data/cache/
 cortex_spool.jsonl
 *.db
 *.db-wal
 *.db-shm
+*.bak
+!data/memory_seed.jsonl
+
 
 # Python Bytecode & Environments
 __pycache__/

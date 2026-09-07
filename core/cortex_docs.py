@@ -16,21 +16,29 @@ import sqlite3
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
+DEFAULT_DOCUMENT_DB_PATH = Path("data/document.db")
 DEFAULT_CORTEX_DB_PATH = Path("data/cortex.db")
 LEGACY_CORTEX_DB_PATH = Path(".agents/knowledge/cortex.db")
 DEFAULT_SPOOL_PATH = Path("data/spool/cortex_spool.jsonl")
 
 
-def resolve_cortex_db_path(configured_path: Optional[Path] = None, check_exists: bool = True) -> Path:
-    """Resolves canonical cortex.db path with backward-compatible legacy fallback."""
+def resolve_document_db_path(configured_path: Optional[Path] = None, check_exists: bool = True) -> Path:
+    """Resolves canonical document.db path with backward-compatible legacy fallback."""
     if configured_path is not None:
         return Path(configured_path)
     if check_exists:
+        if DEFAULT_DOCUMENT_DB_PATH.exists():
+            return DEFAULT_DOCUMENT_DB_PATH
         if DEFAULT_CORTEX_DB_PATH.exists():
             return DEFAULT_CORTEX_DB_PATH
         if LEGACY_CORTEX_DB_PATH.exists():
             return LEGACY_CORTEX_DB_PATH
-    return DEFAULT_CORTEX_DB_PATH
+    return DEFAULT_DOCUMENT_DB_PATH
+
+
+def resolve_cortex_db_path(configured_path: Optional[Path] = None, check_exists: bool = True) -> Path:
+    """Resolves canonical document or cortex path (retained for backward compatibility)."""
+    return resolve_document_db_path(configured_path, check_exists=check_exists)
 
 
 @dataclass(frozen=True)

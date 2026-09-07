@@ -15,6 +15,7 @@ from typing import Callable, Dict, List, Optional
 
 try:
     from core.cortex_docs import (
+        get_connection,
         init_cortex_db,
         restore_archive,
         trigger_architecture_eviction,
@@ -22,18 +23,23 @@ try:
         trigger_state_eviction,
     )
     from core.cortex_knowledge import (
+        export_memory_seed,
         get_cortex_stats,
         get_grounding_directives,
+        hydrate_memory_from_seed,
+        init_knowledge_tables,
         list_parked_tasks,
         park_task,
         query_events,
         record_event,
+        resolve_memory_db_path,
         unpark_task,
         vacuum_decay,
     )
     from core.state_compactor import compact_state_ledger
 except ModuleNotFoundError:
     from sandbox.core.cortex_docs import (
+        get_connection,
         init_cortex_db,
         restore_archive,
         trigger_architecture_eviction,
@@ -41,12 +47,16 @@ except ModuleNotFoundError:
         trigger_state_eviction,
     )
     from sandbox.core.cortex_knowledge import (
+        export_memory_seed,
         get_cortex_stats,
         get_grounding_directives,
+        hydrate_memory_from_seed,
+        init_knowledge_tables,
         list_parked_tasks,
         park_task,
         query_events,
         record_event,
+        resolve_memory_db_path,
         unpark_task,
         vacuum_decay,
     )
@@ -148,8 +158,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_restore.add_argument("--db", type=str, default=None, help="Custom cortex.db path")
 
     # init
-    p_init = subparsers.add_parser("init", help="Initialize cortex.db tables and indexes")
-    p_init.add_argument("--db", type=str, default=None, help="Custom cortex.db path")
+    p_init = subparsers.add_parser("init", help="Initialize memory.db and document.db tables and indexes")
+    p_init.add_argument("--db", type=str, default=None, help="Custom database path")
+
+    # export-seed
+    p_export_seed = subparsers.add_parser("export-seed", help="Export episodic memory to JSONL seed")
+    p_export_seed.add_argument("--seed", type=str, default=None, help="Target seed file path")
+    p_export_seed.add_argument("--db", type=str, default=None, help="Custom memory.db path")
+
+    # hydrate-seed
+    p_hydrate_seed = subparsers.add_parser("hydrate-seed", help="Hydrate memory.db from JSONL seed")
+    p_hydrate_seed.add_argument("--seed", type=str, default=None, help="Source seed file path")
+    p_hydrate_seed.add_argument("--db", type=str, default=None, help="Custom memory.db path")
 
     # compact-ledger
     p_compact = subparsers.add_parser("compact-ledger", help="Compact state ledger and snapshot to cortex")
@@ -165,9 +185,36 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _handle_init(args: argparse.Namespace, db_path: Optional[Path]) -> int:
-    """Handles cortex.db initialization subcommand."""
-    target = init_cortex_db(db_path)
-    sys.stdout.write(f"CORTEX_DB_INITIALIZED: {target}\n")
+    """Handles dual-database initialization and seed auto-hydration."""
+    doc_target = init_cortex_db(db_path)
+    mem_db = resolve_memory_db_path(db_path, check_exists=False)
+    con = get_connection(mem_db)
+    try:
+        init_knowledge_tables(con)
+    finally:
+        con.close()
+    hydrated = hydrate_memory_from_seed(db_path=mem_db)
+    sys.stdout.write(
+        f"CORTEX_DB_INITIALIZED: {doc_target}\n"
+        f"CORTEX_INITIALIZED: memory='{mem_db}' (hydrated {hydrated} seed events), "
+        f"document='{doc_target}'\n"
+    )
+    return 0
+
+
+def _handle_export_seed(args: argparse.Namespace, db_path: Optional[Path]) -> int:
+    """Handles episodic memory export to JSONL seed."""
+    seed_p = Path(args.seed) if args.seed else None
+    cnt = export_memory_seed(db_path=db_path, seed_path=seed_p)
+    sys.stdout.write(f"MEMORY_SEED_EXPORTED: {cnt} event(s) exported.\n")
+    return 0
+
+
+def _handle_hydrate_seed(args: argparse.Namespace, db_path: Optional[Path]) -> int:
+    """Handles episodic memory hydration from JSONL seed."""
+    seed_p = Path(args.seed) if args.seed else None
+    cnt = hydrate_memory_from_seed(seed_path=seed_p, db_path=db_path)
+    sys.stdout.write(f"MEMORY_HYDRATED: {cnt} event(s) imported from seed.\n")
     return 0
 
 
@@ -369,6 +416,8 @@ COMMAND_HANDLERS: Dict[str, Callable[[argparse.Namespace, Optional[Path]], int]]
     "evict-arch": _handle_evict_arch,
     "restore": _handle_restore,
     "compact-ledger": _handle_compact_ledger,
+    "export-seed": _handle_export_seed,
+    "hydrate-seed": _handle_hydrate_seed,
 }
 
 

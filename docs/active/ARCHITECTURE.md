@@ -41,22 +41,34 @@ graph TD
 - Single-threaded deterministic execution"]
     end
 
-    subgraph MemorySubsystem["Cognitive Memory Subsystem"]
+    subgraph MemorySubsystem["Cognitive Memory & Document Storage"]
         ShadowGrounding["Shadow Grounding Engine (core/shadow_grounding.py)
 - In-process Read-Only SQLite pool
 - Sub-5ms JIT retrieval SLA (1.3ms measured)"]
         Cortex["Cortex Storage Controller (core/cortex.py)
 - Decayed LFU Cache
 - FTS5 Full-Text Search Engine"]
-        CortexDB[("SQLite WAL Database (data/cortex.db)
-- 28 diamond-grade invariants
-- busy_timeout=5000ms")]
+        MemoryDB[("data/memory.db (Working Episodic Memory)
+- episodic_events (157B avg)
+- fts_events (FTS5)
+- .gitignore isolated (zero binary diffs)")]
+        DocumentDB[("data/document.db (Archival Documents)
+- state / contract / arch revisions (20KB)
+- fts_archive_search (FTS5)
+- .gitignore isolated")]
+        MemorySeed[("data/memory_seed.jsonl (Git Knowledge SSOT)
+- JSONL text ledger
+- Auto-hydrates memory.db on init (<50ms)")]
         StateCompactor["State Ledger Compactor (core/state_compactor.py)
 - Rolling compaction threshold (>= 10)
-- Full ledger snapshot to cortex.db"]
-        ShadowGrounding -->|"Read-only connection"| CortexDB
-        Cortex -->|"Read / Write connection"| CortexDB
-        StateCompactor -->|"Snapshot persistence"| CortexDB
+- Full ledger snapshot to document.db"]
+
+        ShadowGrounding -->|"Read-only connection"| MemoryDB
+        Cortex -->|"Read / Write"| MemoryDB
+        Cortex -->|"Read / Write"| DocumentDB
+        MemorySeed -.->|"Hydration"| MemoryDB
+        MemoryDB -.->|"Export seed"| MemorySeed
+        StateCompactor -->|"Snapshot persistence"| DocumentDB
     end
 
     subgraph AdvisorySubsystem["Ephemeral Advisory Subsystem (Shadow Clones)"]
@@ -110,11 +122,13 @@ graph TD
 | Boundary | Transport Protocol | Request Payload | Response Contract | Latency SLA / Timeout | Failure Containment |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **`Orchestrator -> ShadowGrounding`** | Python In-Memory API | `query_knowledge_in_process(symptom, top_k=3)` | `List[ShadowGroundingRecord]` | `< 5.0ms` (actual ~1.3ms) | Fallback to empty context list (fail-open) |
-| **`ShadowGrounding -> SQLite`** | Read-Only Connection Pool | Parameterized SQL query | Row tuples | `< 2.0ms` | Thread-local connection recycle |
+| **`ShadowGrounding -> MemoryDB`** | Read-Only Connection Pool | Parameterized SQL query | Row tuples | `< 2.0ms` | Thread-local connection recycle |
 | **`Orchestrator -> Cortex`** | Python In-Memory API / CLI | `record(outcome, trigger, directive)` | Event ID string / JSON dict | `< 25.0ms` | Spooling to in-memory ring buffer |
-| **`Cortex -> SQLite`** | SQLite C-API (WAL Mode) | Parameterized DML statement | Affected row count | `< 5.0ms` (busy: 5000ms) | Exponential backoff retry with jitter |
+| **`Cortex -> MemoryDB`** | SQLite C-API (WAL Mode) | Parameterized DML statement | Affected row count | `< 5.0ms` (busy: 5000ms) | Exponential backoff retry with jitter |
+| **`Cortex -> DocumentDB`** | SQLite C-API (WAL Mode) | Parameterized DML statement | Affected row count | `< 10.0ms` (busy: 5000ms)| Exponential backoff retry with jitter |
+| **`Orchestrator -> SeedEngine`** | Python In-Process API | `export_memory_seed / hydrate_memory_from_seed` | Row count int | `< 50ms` | Line-by-line JSONL serialization |
 | **`Orchestrator -> StateCompactor`** | Python In-Process API / CLI | `compact_state_ledger(target_path)` | `StateCompactionReport` dict | `< 100ms` | Fail-open fallback; retains original ledger |
-| **`StateCompactor -> CortexDocs`** | Python In-Process API | `snapshot_state_ledger(content)` | Revision ID string | `< 25ms` | Spooling to cortex.db state_revisions |
+| **`StateCompactor -> DocumentDB`** | Python In-Process API | `snapshot_state_ledger(content)` | Revision ID string | `< 25ms` | Spooling to document.db state_revisions |
 | **`EvoEngine -> Subprocess`** | OS Process Execution | Candidate code string + Test harness | Telemetry dict (stdout, stderr, exit code) | `3.0s hard ceiling` | Subprocess timeout; candidate marked lethal |
 | **`Preflight -> QualityGates`** | Python In-Process API | Target paths + Suite specifications | Gate report (Pass/Fail) | `< 10.0s max` | Gate rejection; blocks task completion |
 | **`Stop Hook -> SCM & Arch Sync`** | Python Subprocess Execution | Hook stdin context JSON | Stop hook JSON response dict | `< 5.0s max` | Blocks turn completion if uncommitted or unsynced |
@@ -123,18 +137,61 @@ graph TD
 
 ## 3. Core Subsystems Specification
 
-### 3.1 Cognitive Memory & Shadow Grounding Engine (`core/cortex.py` & `core/shadow_grounding.py`)
+### 3.1 Physical Segregation Architecture: Memory vs. Document (`data/memory.db` & `data/document.db`)
 
-The Cognitive Memory subsystem provides persistent semantic retrieval across context resets using **Decayed LFU (Least Frequently Used) Caching** combined with **SQLite FTS5 Full-Text Indexing**. To eliminate read-lock contention on Windows, high-velocity queries execute via a dedicated in-process read-only connection pool.
+The persistence architecture enforces **strict physical segregation** between high-frequency working memory and cold archival documents, resolving SQLite page cache eviction and git repository bloat.
 
-#### Physical DDL Schema (`data/cortex.db`)
+```mermaid
+graph TB
+    subgraph GitTracked["Git-Tracked Artifacts (SSOT)"]
+        Seed["data/memory_seed.jsonl
+(Line-delimited JSON Text SSOT)"]
+        ArchMarkdown["docs/archived/*.md
+(Historical Task Markdown)"]
+    end
+
+    subgraph GitIgnoredStorage["Git-Ignored Runtime Storage (Local Fast SQLite)"]
+        direction TB
+        subgraph MemoryPlane["Episodic Memory Plane (data/memory.db)"]
+            EpisodicTable["episodic_events (avg ~157B)"]
+            FtsEvents["fts_events (FTS5 Sub-5ms)"]
+            ParkedTasks["parked_tasks"]
+        end
+
+        subgraph DocumentPlane["Cold Document Plane (data/document.db)"]
+            ContractRevs["contract_revisions (avg ~15KB)"]
+            StateRevs["state_revisions (avg ~20KB)"]
+            ArchRevs["architecture_revisions"]
+            FtsArchive["fts_archive_search (FTS5 Cold Search)"]
+        end
+    end
+
+    Seed -.->|"Auto-Hydration on Init (<50ms)"| EpisodicTable
+    EpisodicTable -.->|"Deterministic Export"| Seed
+    ShadowGrounding["Shadow Grounding (<1.3ms)"] -->|"Read-only connection"| EpisodicTable
+    StateCompactor["State Ledger Compactor"] -->|"Snapshot"| StateRevs
+    StateCompactor -->|"Export Archive"| ArchMarkdown
+```
+
+#### Physical Payload Asymmetry & Cache Isolation
+- **Discrepancy Profile**: Episodic events average **157 bytes**, whereas state and contract snapshots range from **12.5 KB to 20.5 KB** (~100x discrepancy).
+- **Zero Page Cache Eviction**: By isolating cold document blobs into `data/document.db`, high-frequency episodic memory and FTS token indexes inside `data/memory.db` remain resident in the OS/SQLite page cache, maintaining **~1.3ms** JIT retrieval SLA without cache thrashing.
+
+#### Text Seed SSOT & Hydration Pipeline (`data/memory_seed.jsonl`)
+- **Git Tracking Rule**: Binary SQLite databases (`*.db`, `*.db-wal`, `*.db-shm`) are strictly `.gitignore`d to prevent repository bloat and binary merge conflicts. Knowledge persistence across machines and CI/CD pipelines is maintained exclusively via `data/memory_seed.jsonl` (`!data/memory_seed.jsonl` unignored).
+- **Auto-Hydration**: On cold start or `python -m core.cortex init`, `hydrate_memory_from_seed()` auto-hydrates `data/memory.db` from `memory_seed.jsonl` in **< 50ms**.
+- **Deterministic Export**: `python -m core.cortex export-seed` dumps clean, sorted JSONL records ensuring deterministic, minimal git diffs.
+
+#### Physical DDL Schemas
+
+##### 1. Episodic Working Memory (`data/memory.db`)
 ```sql
 PRAGMA journal_mode = WAL;
 PRAGMA busy_timeout = 5000;
 PRAGMA synchronous = NORMAL;
 PRAGMA user_version = 2;
 
--- Episodic Event Ledger (Purified Knowledge SSOT)
+-- Episodic Event Ledger (High-frequency JIT knowledge)
 CREATE TABLE IF NOT EXISTS episodic_events (
     id TEXT PRIMARY KEY,
     outcome TEXT CHECK(outcome IN ('SUCCESS', 'FAILURE')) NOT NULL,
@@ -148,7 +205,7 @@ CREATE TABLE IF NOT EXISTS episodic_events (
     last_accessed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Full-Text Search (FTS5) Virtual Table for Sub-5ms Token Matching
+-- Full-Text Search (FTS5) Virtual Table for Sub-5ms Matching
 CREATE VIRTUAL TABLE IF NOT EXISTS fts_events USING fts5(
     id UNINDEXED,
     component,
@@ -158,7 +215,6 @@ CREATE VIRTUAL TABLE IF NOT EXISTS fts_events USING fts5(
     content_rowid='rowid'
 );
 
--- Automated Triggers for FTS Synchronization
 CREATE TRIGGER IF NOT EXISTS trg_fts_insert AFTER INSERT ON episodic_events BEGIN
     INSERT INTO fts_events(rowid, id, component, trigger_tokens, directive)
     VALUES (new.rowid, new.id, new.component, new.trigger_tokens, new.directive);
@@ -168,12 +224,59 @@ CREATE TRIGGER IF NOT EXISTS trg_fts_delete AFTER DELETE ON episodic_events BEGI
     INSERT INTO fts_events(fts_events, rowid, id, component, trigger_tokens, directive)
     VALUES ('delete', old.rowid, old.id, old.component, old.trigger_tokens, old.directive);
 END;
+
+-- Parked Tasks Table
+CREATE TABLE IF NOT EXISTS parked_tasks (
+    id TEXT PRIMARY KEY,
+    description TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    parked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+##### 2. Archival Document Plane (`data/document.db`)
+```sql
+PRAGMA journal_mode = WAL;
+PRAGMA busy_timeout = 5000;
+PRAGMA synchronous = NORMAL;
+
+-- Contract Revisions Archive (WORM Storage)
+CREATE TABLE IF NOT EXISTS contract_revisions (
+    id TEXT PRIMARY KEY,
+    task_id TEXT NOT NULL,
+    contract_yaml TEXT NOT NULL,
+    invariants_json TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- State Ledger Revisions Archive
+CREATE TABLE IF NOT EXISTS state_revisions (
+    id TEXT PRIMARY KEY,
+    revision_tag TEXT NOT NULL,
+    ledger_content TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Architecture Revisions Archive
+CREATE TABLE IF NOT EXISTS architecture_revisions (
+    id TEXT PRIMARY KEY,
+    revision_tag TEXT NOT NULL,
+    architecture_content TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Unified FTS5 Virtual Table for Cold Document Search
+CREATE VIRTUAL TABLE IF NOT EXISTS fts_archive_search USING fts5(
+    doc_id UNINDEXED,
+    doc_type,
+    content
+);
 ```
 
 #### Read-Only Connection Pooling (`_ReadOnlyPool`)
-- **Connection Isolation**: Queries run through `sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)`. Read operations never acquire SQLite RESERVED or EXCLUSIVE locks.
-- **Microsecond Latency**: Prepared queries against FTS5 execute in ~1.3ms, safely inside the 5.0ms SLA budget.
-- **Fail-Open Resilience**: If the database file is absent or locked by an external process, `query_knowledge_in_process` falls back to empty results without throwing uncaught exceptions.
+- **Connection Isolation**: Shadow Grounding queries execute through `sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)`. Read operations never acquire SQLite `RESERVED` or `EXCLUSIVE` locks.
+- **Microsecond Latency**: Prepared queries against `memory.db` execute in ~1.3ms, safely inside the 5.0ms SLA budget.
+- **Fail-Open Resolver**: `resolve_memory_db_path()` and `resolve_document_db_path()` locate target databases, falling back safely if needed.
 
 #### Recency Scoring Formulation
 Recency weight degrades via a standard half-life formulation evaluated lazily upon access:
@@ -300,7 +403,7 @@ python -m core.cortex compact-ledger --target docs/active/CURRENT_STATE.md
    - When total promoted tasks in `CURRENT_STATE.md` reach 10 or more, compaction is mechanically required.
    - The compactor prunes older completed tasks from both the Kanban board (`ColPromoted`) and the task ledger table, retaining strictly the most recent 5 completed tasks.
 2. **Deterministic Epistemic Snapshot (`core/cortex_docs.py`)**:
-   - Prior to modifying the ledger, `snapshot_state_ledger()` captures the complete raw markdown into `state_revisions` in `data/cortex.db`.
+   - Prior to modifying the ledger, `snapshot_state_ledger()` captures the complete raw markdown into `state_revisions` in `data/document.db`.
    - The revision is immediately indexed into `fts_archive_search` virtual table, enabling instant full-text search across all historical tasks via `python -m core.cortex query-archive "<query>"`.
 3. **Physical Historical Archive Document**:
    - Pruned tasks are serialized into structured markdown archives under `docs/archived/` (e.g. `TASK_ARCHIVE_027_030.md`), preserving audit trails and verification evidence permanently in git.

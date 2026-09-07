@@ -32,6 +32,9 @@ class CanonicalPaths:
     DOCS_SPECS: Path = Path("docs/specs")
     DATA: Path = Path("data")
     DATA_CORTEX_DB: Path = Path("data/cortex.db")
+    DATA_MEMORY_DB: Path = Path("data/memory.db")
+    DATA_DOCUMENT_DB: Path = Path("data/document.db")
+    DATA_MEMORY_SEED: Path = Path("data/memory_seed.jsonl")
     DATA_SPOOL: Path = Path("data/spool")
     DATA_CACHE: Path = Path("data/cache")
     SCRIPTS: Path = Path("scripts")
@@ -270,6 +273,38 @@ def resolve_cortex_db_path(configured_path: Optional[Path] = None, check_exists:
         if legacy.exists():
             return legacy
 
+    return canonical
+
+
+def resolve_memory_db_path(configured_path: Optional[Path] = None, check_exists: bool = True) -> Path:
+    """
+    Resolves canonical memory.db path with fallback to cortex.db if memory.db is absent.
+    Conforms to [INV-SPLIT-01] and [INV-SPLIT-02].
+    """
+    if configured_path is not None:
+        return Path(configured_path)
+    canonical = CanonicalPaths.DATA_MEMORY_DB
+    fallback = CanonicalPaths.DATA_CORTEX_DB
+    if canonical.exists():
+        return canonical
+    if fallback.exists():
+        return fallback
+    return canonical
+
+
+def resolve_document_db_path(configured_path: Optional[Path] = None, check_exists: bool = True) -> Path:
+    """
+    Resolves canonical document.db path with fallback to cortex.db if document.db is absent.
+    Conforms to [INV-SPLIT-01] and [INV-SPLIT-03].
+    """
+    if configured_path is not None:
+        return Path(configured_path)
+    canonical = CanonicalPaths.DATA_DOCUMENT_DB
+    fallback = CanonicalPaths.DATA_CORTEX_DB
+    if canonical.exists():
+        return canonical
+    if fallback.exists():
+        return fallback
     return canonical
 
 

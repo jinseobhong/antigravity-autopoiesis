@@ -22,16 +22,16 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 try:
     from core.cortex_knowledge import (
-        DEFAULT_CORTEX_DB_PATH,
+        DEFAULT_MEMORY_DB_PATH,
         get_connection,
-        resolve_cortex_db_path,
+        resolve_memory_db_path,
         sanitize_fts_query,
     )
 except ModuleNotFoundError:
     from sandbox.core.cortex_knowledge import (
-        DEFAULT_CORTEX_DB_PATH,
+        DEFAULT_MEMORY_DB_PATH,
         get_connection,
-        resolve_cortex_db_path,
+        resolve_memory_db_path,
         sanitize_fts_query,
     )
 
@@ -308,7 +308,7 @@ def get_shadow_grounding(
     start_time = time.perf_counter()
     clean_task = str(task_query or "").strip()
 
-    target_db = resolve_cortex_db_path(db_path, check_exists=False)
+    target_db = resolve_memory_db_path(db_path, check_exists=True)
     if not target_db.exists():
         elapsed = (time.perf_counter() - start_time) * 1000.0
         return ShadowGroundingResult(task_query=clean_task, elapsed_ms=elapsed, profiles={})

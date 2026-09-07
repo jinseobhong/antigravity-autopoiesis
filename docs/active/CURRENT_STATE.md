@@ -157,6 +157,7 @@ flowchart TD
         PRM_134["TASK-034: Eliminate Redundant Built-in Duplicates & Purge Telemetry Collectors (v1.0)"]
         PRM_135["TASK-035: Living Architecture Blueprint v4.0 & Stop Hook Architecture Sync Guard (v1.0)"]
         PRM_136["TASK-036: State Ledger Rolling Compactor, Cortex Snapshot Engine & Stop Hook Compaction Guard (v1.0)"]
+        PRM_137["TASK-037: Memory-Document Physical Split and Seed Hydration Pipeline (v1.0)"]
     end
 
     ColPlanned -->|"Assign Available Slot"| ColActive
@@ -167,13 +168,14 @@ flowchart TD
 ### 3.2 Current State Task Ledger
 
 | Task ID | Task Description | Lifecycle Status | Retries [Used/Max] | Blast Radius Tier | Owner | Verification Gate |
-| :--- | :--- | :--- | :---: | :--- | :--- | :--- |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | *`TASK-001..030`* | *Archived to cortex.db and docs/archived/TASK_ARCHIVE_001_026.md, TASK_ARCHIVE_027_030.md* | `ARCHIVED` | - | Multiple | Platform Team | 100% CI pass; Trunk merged; Knowledge persisted |
 | **`TASK-031`** | Configuration Baseline and Run Completion Enforcement Hook | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Engineer | 46 companion tests pass (0.86s); Clean AST; Hook registered; Fail-open verified. |
 | **`TASK-033`** | Cortex Knowledge Purification and Shadow Grounding Engine | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Engineer | 11 companion tests pass (0.25s); 349 full tests pass; 174 spam purged; < 5ms SLA verified; Clean AST. |
 | **`TASK-034`** | Eliminate Redundant Built-in Duplicates & Purge Telemetry Collectors | `PROMOTED` | 0/2 | Tier 3 (Governance) | Sovereign Architect | Deleted 8 redundant files (grill-me, ACTIVE_CONTRACT, backprop, diagnostics); GEMINI.md v10.1; 0 defects. |
 | **`TASK-035`** | Living Architecture Blueprint v4.0 & Stop Hook Architecture Sync Guard | `PROMOTED` | 0/2 | Tier 2 (Code) | Sovereign Architect | 52 companion tests pass (0.89s); 296 full tests pass; ARCHITECTURE.md v4.0 living blueprint; Clean AST; Stop Hook verified. |
 | **`TASK-036`** | State Ledger Rolling Compactor, Cortex Snapshot Engine & Stop Hook Compaction Guard | `PROMOTED` | 0/2 | Tier 2 (Code) | Sovereign Architect | 11 compactor tests pass (0.26s); 56 baseline tests pass; Snapshot in cortex.db; Clean AST; Compaction verified. |
+| **`TASK-037`** | Memory-Document Physical Split and Seed Hydration Pipeline | `PROMOTED` | 0/2 | Tier 2 (Code) | Sovereign Architect | 9 companion tests pass (1.20s); 320 full tests pass; 100% SHA-256 parity; Seed auto-hydration verified (<50ms). |
 
 ---
 
