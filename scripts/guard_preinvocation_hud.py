@@ -98,16 +98,8 @@ def process_preinvocation(
     snapshot = extractor.extract_snapshot(repo_root)
     html_source = extractor.render_html(snapshot)
 
-    # Write to authoritative docs path
+    # Write live HUD HTML strictly to conversation artifact directory to prevent dirtying git tree
     doc_hud = repo_root / "docs" / "active" / "COGNITIVE_HUD.html"
-    try:
-        doc_hud.parent.mkdir(parents=True, exist_ok=True)
-        doc_hud.write_text(html_source, encoding="utf-8")
-    except OSError:
-        # Gracefully handle write permissions errors under fail-open isolation
-        sys.stderr.write("[preinvocation-hud-guard] Warning: Unable to write doc_hud\n")
-
-    # Write to conversation artifact path if distinct
     target_hud = doc_hud
     if artifact_dir.resolve() != doc_hud.parent.resolve():
         art_hud = artifact_dir / "COGNITIVE_HUD.html"
@@ -118,6 +110,13 @@ def process_preinvocation(
         except OSError:
             # Fallback to doc_hud if artifact directory cannot be written
             target_hud = doc_hud
+    elif not doc_hud.exists():
+        try:
+            doc_hud.parent.mkdir(parents=True, exist_ok=True)
+            doc_hud.write_text(html_source, encoding="utf-8")
+        except OSError:
+            # Gracefully handle write errors under fail-open isolation
+            sys.stderr.write("[preinvocation-hud-guard] Warning: Unable to write doc_hud\n")
 
     msg = _format_ephemeral_message(snapshot, target_hud)
 
