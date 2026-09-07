@@ -148,6 +148,7 @@ flowchart TD
         PRM_129["TASK-029: Resilient Exponential Backoff Retry Policy Engine (v1.0)"]
         PRM_130["TASK-030: AI-Native Evolutionary Recombination Engine (v1.0)"]
         PRM_131["TASK-031: Configuration Baseline and Run Completion Enforcement Hook (v1.0)"]
+        PRM_132["TASK-032: Rebuild Core 4 Agents as Sovereign Advisory Consultants (v1.0)"]
     end
 
     ColPlanned -->|"Assign Available Slot"| ColActive

@@ -147,33 +147,29 @@ sequenceDiagram
 
 ## 4. Deep-Dive Persona Profiles
 
-### 4.1 `software-engineer` (Lead Systems Software Engineer)
-- **Primary Mandate**: Implements minimal, production-grade source code satisfying contracts under IV&V.
-- **Modular Parallel Mode**: Supports concurrent dispatch across decoupled modules bound by frozen `protocols.py`.
-- **Confinement Invariant**: All new files and experimental code MUST reside inside `./sandbox/`.
+### 4.1 `software-engineer` (Systems Implementation Advisor & Code Strategist)
+- **Primary Mandate**: Formulates deep domain algorithm blueprints and AST-compliant code implementations for the Primary Orchestrator.
+- **Pure Advisory Invariant**: Emits structured code blueprints via `send_message` with zero direct file mutations.
 - **Quality Mandate**: Enforces CC $\le 10$, nesting depth $\le 3$, and strict KISS/YAGNI principles.
-- **Invocation Mechanism**: Dispatched via Antigravity `invoke_subagent` for read-only qualitative review.
+- **Invocation Mechanism**: Dispatched via Antigravity `invoke_subagent` for implementation advice.
 
-### 4.2 `qa-engineer` (Lead Systems QA Engineer & Adversarial Verifier)
-- **Primary Mandate**: Authors independent, contract-breaking unit and integration test suites.
-- **Dual Synthesis Modes**:
-  - **Functional QA**: Tests happy-path contracts, valid state transitions, and deterministic outputs.
-  - **Adversarial QA**: Tests failure paths, timeout watchdogs, file lock contention, and bad input handling.
-- **IV&V Invariant**: Operates independently from `software-engineer` directly from `ACTIVE_CONTRACT.md`.
+### 4.2 `qa-engineer` (Systems QA Advisor & Adversarial Test Strategist)
+- **Primary Mandate**: Formulates exhaustive test matrices, fault domain mappings, and companion test suite blueprints.
 - **Negative Ratio Mandate**: Maintains $\ge 40\%$ negative assertions evaluating edge cases and exceptions (`H-CODE-3`).
-- **Invocation Mechanism**: Dispatched via Antigravity `invoke_subagent` for read-only qualitative review.
+- **Pure Advisory Invariant**: Emits companion test code via `send_message` for the Orchestrator to author and execute.
+- **Invocation Mechanism**: Dispatched via Antigravity `invoke_subagent` for test strategy.
 
-### 4.3 `socratic-interviewer` (Socratic Requirements Architect)
-- **Primary Mandate**: Explores ambiguous problem domains through multi-turn interrogation, formulating binding contracts.
+### 4.3 `socratic-interviewer` (Socratic Requirements Advisor & Contract Elicitor)
+- **Primary Mandate**: Conducts interactive Socratic interviews via `ask_question`, resolving requirements and formulating contract drafts.
 - **Fail-Closed Invariant**: Enforces `[INV-GRILL-07]` (Silence Is Not Consent); missing responses quarantine to `ON_HOLD`.
-- **Target Artifact**: Authors `docs/active/ACTIVE_CONTRACT.md`.
-- **Invocation Mechanism**: Dispatched via Antigravity `invoke_subagent` for read-only qualitative review.
+- **Pure Advisory Invariant**: Transmits contract drafts via `send_message` to Orchestrator without direct filesystem writes.
+- **Invocation Mechanism**: Dispatched via Antigravity `invoke_subagent` for requirement elicitation.
 
-### 4.4 `technical-writer` (Lead Technical Writer & Information Architect)
-- **Primary Mandate**: Authors NASA-grade technical specifications, architectural blueprints, ADRs, and operational runbooks.
+### 4.4 `technical-writer` (Lead Technical Writing Advisor & Systems Information Architect)
+- **Primary Mandate**: Analyzes architectural state and synthesizes NASA-grade technical specifications, ADRs, and runbook blueprints.
 - **Normative Invariant**: Uses strict normative keywords (`SHALL`, `SHALL NOT`, `MUST`, `DO`, `DON'T`).
-- **Quality Gate**: Clears `validate_doc_preapproval.py` with 0 defects before handoff.
-- **Invocation Mechanism**: Dispatched via Antigravity `invoke_subagent` for read-only qualitative review.
+- **Pure Advisory Invariant**: Emits documentation blueprints via `send_message` for the Orchestrator to author.
+- **Invocation Mechanism**: Dispatched via Antigravity `invoke_subagent` for documentation synthesis.
 
 ### 4.5 `technical-reviewer-architecture` (Domain Abstraction Reviewer)
 - **Primary Mandate**: Audits domain abstraction honesty, value objects, ubiquitous language, and speculative over-engineering.
