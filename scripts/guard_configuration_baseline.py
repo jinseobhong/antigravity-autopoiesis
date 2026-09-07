@@ -19,6 +19,11 @@ import subprocess
 import sys
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_REPO_ROOT = os.path.abspath(os.path.join(_SCRIPT_DIR, ".."))
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+
 COMMIT_DIRECTIVE_MESSAGE = (
     "[MANDATORY SCM COMMIT] Run concluded with uncommitted modifications. "
     "Mandatory SCM invariant: You MUST commit the configuration baseline "
@@ -248,10 +253,18 @@ def check_preflight_verification(
                 return False, msg
             return True, None
 
+        root_str = str(repo_root.resolve())
+        if root_str not in sys.path:
+            sys.path.insert(0, root_str)
+
         try:
             from scripts.preflight_check import run_preflight
         except ModuleNotFoundError:
-            from sandbox.scripts.preflight_check import run_preflight
+            try:
+                import preflight_check as preflight_mod  # type: ignore[import-not-found]
+                run_preflight = preflight_mod.run_preflight
+            except ModuleNotFoundError:
+                from sandbox.scripts.preflight_check import run_preflight
 
         report = run_preflight(root_path=repo_root, quick=False)
         if not report.passed:
