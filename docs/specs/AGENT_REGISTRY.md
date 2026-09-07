@@ -26,7 +26,7 @@ mutation privileges, and cognitive mandates:
 ```mermaid
 flowchart TD
     subgraph TierP0 ["P0: Core Mutating Systems Agents (IV&V)"]
-        SE["software-engineer<br>(Production Code Modules in Sandbox)"]
+        SE["software-engineer<br>(Production Code Modules)"]
         QA["qa-engineer<br>(Dual Functional & Adversarial Tests)"]
         SI["socratic-interviewer<br>(Requirements & Contracts)"]
     end
@@ -56,7 +56,7 @@ flowchart TD
 
 ### 1.1 Taxonomy Classification Definitions
 1. **Tier P0 (Systems Builders, Elicitors & QA Verifiers)**:
-   - Agents possessing scoped filesystem write privileges in `./sandbox/` or `docs/active/`.
+   - Agents possessing scoped filesystem authoring roles under Sovereign Git tree or `docs/active/`.
    - Authorized for requirement elicitation (`socratic-interviewer`), production coding (`software-engineer`),
      and independent adversarial and functional test authoring (`qa-engineer`).
 2. **Tier P1 (Adversarial Quality Reviewers)**:
@@ -116,13 +116,13 @@ sequenceDiagram
     Operator->>Orch: "Contract Ratified (ACCEPTED)"
 
     Note over Orch, Proto: "Phase 1: Interface Lockdown"
-    Orch->>Proto: "Stage Protocols & Value Objects (sandbox/core/types.py)"
+    Orch->>Proto: "Stage Protocols & Value Objects (core/interfaces/*_proto.py)"
 
     par ["Phase 2: Modular Fan-Out Dispatch"]
         Orch->>QA: "Synthesize Functional & Adversarial Test Suites"
         QA-->>Orch: "Dual Test Suites Staged (tests/)"
         Orch->>SE: "Author Decoupled Implementation Modules"
-        SE-->>Orch: "Candidate Modules Staged in sandbox/core/"
+        SE-->>Orch: "Candidate Modules Proposed (core/)"
     end
 
     Note over Orch, TR: "Phase 3: Provisional Multi-Module Review"
@@ -136,7 +136,7 @@ sequenceDiagram
 
     Note over Orch, DR: "Documentation Lifecycle"
     Orch->>TW: "Dispatch Documentation (write-document)"
-    TW->>Orch: "Specs Staged in sandbox/docs/"
+    TW->>Orch: "Specs Proposed (docs/)"
     Orch->>DR: "Dispatch 3-Reviewer Panel (review-documentation)"
     DR-->>Orch: "Consolidated Verdict: APPROVED"
     Orch->>Prod: "Apply Documentation Patch"
