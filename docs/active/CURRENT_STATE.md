@@ -42,7 +42,7 @@ dependencies:
 | :--- | :--- | :--- | :--- |
 | **Corrupted Production State** | Repository Root (`.`) | `git status --porcelain` | `git checkout -- . && git clean -fd` |
 | **Preflight Gate Failure** | Quality Gates | `python scripts/preflight_check.py --verbose` | `python scripts/compliance_checker.py <failing_path>` |
-| **Database Concurrency Lock** | Cognitive Memory (`data/cortex.db`) | `python -m core.cortex stats` | Retry with exponential backoff or flush buffer |
+| **Database Concurrency Lock** | Cognitive Memory (`data/memory.db`) | `python -m core.cortex stats` | Retry with exponential backoff or flush buffer |
 | **Compliance Gate Rejection** | Quality Gates | `python scripts/compliance_checker.py <path>` | Remediate reported AST defects |
 
 ---
@@ -81,7 +81,7 @@ flowchart LR
     subgraph BacklogTier ["Persistent Backlog Tier"]
         ReqQueue["REQUESTED Queue"]
         PlanQueue["PLANNED Queue"]
-        ParkVault[("PARKED Vault (cortex.db)")]
+        ParkVault[("PARKED Vault (memory.db)")]
     end
 
     subgraph ActiveHorizon ["Rolling Task Horizon (Capacity Ceiling: 5)"]
@@ -109,16 +109,15 @@ flowchart LR
 
 1. **Active Horizon Capacity**: Active tasks (`IN_PROGRESS` + `VERIFIED`) MUST NOT exceed 5 concurrent items.
 2. **Overflow Parking Protocol**: When all 5 active slots are occupied, any newly approved task MUST receive `PARKED` status.
-3. **Storage Invariant**: Parked tasks MUST be persisted into `cortex.db` with an explicit reason record. Prior to Milestone 4 implementation of `cortex.db`, parked tasks MUST use filesystem fallback storage (`sandbox/state/parked_tasks.json`).
+3. **Storage Invariant**: Parked tasks MUST be persisted into `memory.db` (`parked_tasks`) with an explicit reason record.
 4. **Promotion Replenishment**: When an active task transitions to `PROMOTED` or `ROLLED_BACK`, the highest-priority `PARKED` task MAY transition to `IN_PROGRESS`.
 5. **Silence Is Not Consent Invariant (묵시적 승인 금지)**: When an interactive elicitation (`ask_question`), review panel, or task proposal encounters a timeout or absence of explicit operator response, the task MUST NOT auto-advance to `PLANNED` or `IN_PROGRESS`. It MUST transition to `ON_HOLD` or `PARKED` with an explicit reason record, awaiting sovereign operator reactivation.
 
 ### 2.2 Rolling Task Horizon & Compaction Policy (>= 10 Promoted Tasks)
 - **Compaction Trigger**: When the count of promoted tasks in the state ledger reaches 10 or more, compaction is mechanically required.
 - **Stop Hook Enforcement**: The Stop Hook (`scripts/guard_configuration_baseline.py`) SHALL intercept turn completion if promoted tasks exceed the threshold.
-- **Cortex Snapshot Invariant**: An immutable snapshot of the full ledger MUST be persisted into `cortex.db` (`state_revisions` and `fts_archive_search`).
+- **Document Snapshot Invariant**: An immutable snapshot of the full ledger MUST be persisted into `document.db` (`state_revisions` and `fts_archive_search`), eliminating redundant disk files.
 - **Episodic Memory Invariant**: An episodic trace of compaction MUST be recorded in `episodic_events`.
-- **File Archive Generation**: Pruned historical tasks MUST be authored into `docs/archived/TASK_ARCHIVE_<start>_<end>.md`.
 - **Rolling Retained Horizon**: Exactly the 5 most recent promoted tasks MUST be retained in the Kanban board (`ColPromoted`) and Task Ledger table.
 
 ---
@@ -137,7 +136,7 @@ flowchart TD
         PLN_100["[No Planned Tasks]"]
     end
 
-    subgraph ColParked ["PARKED (cortex.db)"]
+    subgraph ColParked ["PARKED (memory.db)"]
         PRK_100["[No Parked Tasks]"]
     end
 
@@ -150,7 +149,7 @@ flowchart TD
     end
 
     subgraph ColPromoted ["5. PROMOTED (Recent 5 Active Horizon)"]
-        PRM_ARCH["TASK-001..030: Archived to cortex.db and docs/archived"]
+        PRM_ARCH["TASK-001..030: Archived to document.db (state_revisions)"]
         PRM_131["TASK-031: Configuration Baseline and Run Completion Enforcement Hook (v1.0)"]
         PRM_132["TASK-032: Rebuild Core 4 Agents as Sovereign Advisory Consultants (v1.0)"]
         PRM_133["TASK-033: Cortex Knowledge Purification and Shadow Grounding Engine (v1.0)"]
@@ -169,12 +168,12 @@ flowchart TD
 
 | Task ID | Task Description | Lifecycle Status | Retries [Used/Max] | Blast Radius Tier | Owner | Verification Gate |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| *`TASK-001..030`* | *Archived to cortex.db and docs/archived/TASK_ARCHIVE_001_026.md, TASK_ARCHIVE_027_030.md* | `ARCHIVED` | - | Multiple | Platform Team | 100% CI pass; Trunk merged; Knowledge persisted |
+| *`TASK-001..030`* | *Archived to document.db (state_revisions snapshot)* | `ARCHIVED` | - | Multiple | Platform Team | 100% CI pass; Trunk merged; Knowledge persisted |
 | **`TASK-031`** | Configuration Baseline and Run Completion Enforcement Hook | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Engineer | 46 companion tests pass (0.86s); Clean AST; Hook registered; Fail-open verified. |
 | **`TASK-033`** | Cortex Knowledge Purification and Shadow Grounding Engine | `PROMOTED` | 0/2 | Tier 2 (Code) | Systems Engineer | 11 companion tests pass (0.25s); 349 full tests pass; 174 spam purged; < 5ms SLA verified; Clean AST. |
 | **`TASK-034`** | Eliminate Redundant Built-in Duplicates & Purge Telemetry Collectors | `PROMOTED` | 0/2 | Tier 3 (Governance) | Sovereign Architect | Deleted 8 redundant files (grill-me, ACTIVE_CONTRACT, backprop, diagnostics); GEMINI.md v10.1; 0 defects. |
 | **`TASK-035`** | Living Architecture Blueprint v4.0 & Stop Hook Architecture Sync Guard | `PROMOTED` | 0/2 | Tier 2 (Code) | Sovereign Architect | 52 companion tests pass (0.89s); 296 full tests pass; ARCHITECTURE.md v4.0 living blueprint; Clean AST; Stop Hook verified. |
-| **`TASK-036`** | State Ledger Rolling Compactor, Cortex Snapshot Engine & Stop Hook Compaction Guard | `PROMOTED` | 0/2 | Tier 2 (Code) | Sovereign Architect | 11 compactor tests pass (0.26s); 56 baseline tests pass; Snapshot in cortex.db; Clean AST; Compaction verified. |
+| **`TASK-036`** | State Ledger Rolling Compactor, Cortex Snapshot Engine & Stop Hook Compaction Guard | `PROMOTED` | 0/2 | Tier 2 (Code) | Sovereign Architect | 11 compactor tests pass (0.26s); 56 baseline tests pass; Snapshot in document.db; Clean AST; Compaction verified. |
 | **`TASK-037`** | Memory-Document Physical Split and Seed Hydration Pipeline | `PROMOTED` | 0/2 | Tier 2 (Code) | Sovereign Architect | 9 companion tests pass (1.20s); 320 full tests pass; 100% SHA-256 parity; Seed auto-hydration verified (<50ms). |
 
 ---

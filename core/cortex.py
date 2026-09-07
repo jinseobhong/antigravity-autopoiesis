@@ -80,7 +80,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_record.add_argument("--root-cause", type=str, default=None, help="Root cause explanation (for failures)")
     p_record.add_argument("--solution", type=str, default=None, help="Verified solution (for successes)")
     p_record.add_argument("--validation", type=str, default=None, help="Verification evidence or test output")
-    p_record.add_argument("--db", type=str, default=None, help="Custom cortex.db path")
+    p_record.add_argument("--db", type=str, default=None, help="Custom memory.db path")
 
     # query
     p_query = subparsers.add_parser("query", help="Query episodic events using FTS5 keywords or indexed fields")
@@ -89,13 +89,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_query.add_argument("--outcome", choices=["SUCCESS", "FAILURE"], default=None, help="Filter by outcome")
     p_query.add_argument("--limit", type=int, default=5, help="Maximum results to return (default: 5)")
     p_query.add_argument("--json", action="store_true", help="Output results as JSON")
-    p_query.add_argument("--db", type=str, default=None, help="Custom cortex.db path")
+    p_query.add_argument("--db", type=str, default=None, help="Custom memory.db path")
 
     # ground
     p_ground = subparsers.add_parser("ground", help="Retrieve grounding directives for prompt injection")
     p_ground.add_argument("--keywords", type=str, required=True, help="Keywords or domain tokens to match")
     p_ground.add_argument("--limit", type=int, default=5, help="Maximum directives to retrieve (default: 5)")
-    p_ground.add_argument("--db", type=str, default=None, help="Custom cortex.db path")
+    p_ground.add_argument("--db", type=str, default=None, help="Custom memory.db path")
     p_ground.add_argument("--json", action="store_true", help="Output directives as JSON")
 
     # park-task
@@ -105,30 +105,30 @@ def build_parser() -> argparse.ArgumentParser:
     p_park.add_argument("--reason", type=str, required=True, help="Reason for parking (e.g. Horizon capacity 5/5)")
     p_park.add_argument("--desc", type=str, default="", help="Detailed task description")
     p_park.add_argument("--payload", type=str, default="{}", help="Task payload JSON string")
-    p_park.add_argument("--db", type=str, default=None, help="Custom cortex.db path")
+    p_park.add_argument("--db", type=str, default=None, help="Custom memory.db path")
 
     # unpark-task
     p_unpark = subparsers.add_parser("unpark-task", help="Reactivate a task from the cortex vault")
     p_unpark.add_argument("--id", type=str, required=True, help="Task ID to unpark")
-    p_unpark.add_argument("--db", type=str, default=None, help="Custom cortex.db path")
+    p_unpark.add_argument("--db", type=str, default=None, help="Custom memory.db path")
 
     # list-parked
     p_list_parked = subparsers.add_parser("list-parked", help="List tasks currently in the cortex vault")
     p_list_parked.add_argument("--status", type=str, default="PARKED", help="Filter by status (default: PARKED)")
     p_list_parked.add_argument("--json", action="store_true", help="Output results as JSON")
-    p_list_parked.add_argument("--db", type=str, default=None, help="Custom cortex.db path")
+    p_list_parked.add_argument("--db", type=str, default=None, help="Custom memory.db path")
 
     # stats
     p_stats = subparsers.add_parser("stats", help="Display aggregated telemetry across all cortex tables")
     p_stats.add_argument("--json", action="store_true", help="Output results as JSON")
-    p_stats.add_argument("--db", type=str, default=None, help="Custom cortex.db path")
+    p_stats.add_argument("--db", type=str, default=None, help="Custom database path")
 
     # vacuum
     p_vacuum = subparsers.add_parser("vacuum", help="Evaluate decayed retention weights and prune stale traces")
     p_vacuum.add_argument("--half-life", type=float, default=168.0, help="Half-life in hours (default: 168.0)")
     p_vacuum.add_argument("--min-weight", type=float, default=0.05, help="Minimum retention weight (default: 0.05)")
     p_vacuum.add_argument("--min-frequency", type=int, default=3, help="Minimum access frequency (default: 3)")
-    p_vacuum.add_argument("--db", type=str, default=None, help="Custom cortex.db path")
+    p_vacuum.add_argument("--db", type=str, default=None, help="Custom memory.db path")
 
     # evict-contract
     p_contract = subparsers.add_parser("evict-contract", help="Evict excess contracts to contract_revisions")
@@ -136,26 +136,26 @@ def build_parser() -> argparse.ArgumentParser:
         "--dir", type=str, required=True, help="Directory containing active contract markdown files"
     )
     p_contract.add_argument("--capacity", type=int, default=5, help="Maximum transient contracts on disk (default: 5)")
-    p_contract.add_argument("--db", type=str, default=None, help="Custom cortex.db path")
+    p_contract.add_argument("--db", type=str, default=None, help="Custom document.db path")
 
     # evict-state
     p_state = subparsers.add_parser("evict-state", help="Evict excess state ledgers to state_revisions")
     p_state.add_argument("--dir", type=str, required=True, help="Directory containing state ledger history files")
     p_state.add_argument("--capacity", type=int, default=5, help="Maximum transient state files on disk (default: 5)")
-    p_state.add_argument("--db", type=str, default=None, help="Custom cortex.db path")
+    p_state.add_argument("--db", type=str, default=None, help="Custom document.db path")
 
     # evict-arch
     p_arch = subparsers.add_parser("evict-arch", help="Evict excess blueprints to architecture_revisions")
     p_arch.add_argument("--dir", type=str, required=True, help="Directory containing blueprint files")
     p_arch.add_argument("--capacity", type=int, default=5, help="Maximum transient blueprints on disk (default: 5)")
-    p_arch.add_argument("--db", type=str, default=None, help="Custom cortex.db path")
+    p_arch.add_argument("--db", type=str, default=None, help="Custom document.db path")
 
     # restore
     p_restore = subparsers.add_parser("restore", help="Restore an archived document revision with SHA-256 validation")
     p_restore.add_argument("--domain", choices=["contract", "state", "architecture"], required=True, help="Domain type")
     p_restore.add_argument("--id", type=str, required=True, help="Revision ID or Entity ID to restore")
     p_restore.add_argument("--out", type=str, required=True, help="Target destination path on disk")
-    p_restore.add_argument("--db", type=str, default=None, help="Custom cortex.db path")
+    p_restore.add_argument("--db", type=str, default=None, help="Custom document.db path")
 
     # init
     p_init = subparsers.add_parser("init", help="Initialize memory.db and document.db tables and indexes")
@@ -172,14 +172,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_hydrate_seed.add_argument("--db", type=str, default=None, help="Custom memory.db path")
 
     # compact-ledger
-    p_compact = subparsers.add_parser("compact-ledger", help="Compact state ledger and snapshot to cortex")
+    p_compact = subparsers.add_parser("compact-ledger", help="Compact state ledger and snapshot to document.db")
     p_compact.add_argument("--ledger", type=str, default="docs/active/CURRENT_STATE.md", help="Path to state ledger")
     p_compact.add_argument("--threshold", type=int, default=10, help="Compaction threshold (default: 10)")
     p_compact.add_argument("--keep", type=int, default=5, help="Recent tasks to keep (default: 5)")
-    p_compact.add_argument("--archive-dir", type=str, default="docs/archived", help="Archive directory")
+    p_compact.add_argument("--archive-dir", type=str, default=None, help="Optional archive directory")
     p_compact.add_argument("--force", action="store_true", help="Force compaction regardless of count")
     p_compact.add_argument("--json", action="store_true", help="Output compaction report JSON")
-    p_compact.add_argument("--db", type=str, default=None, help="Custom cortex.db path")
+    p_compact.add_argument("--db", type=str, default=None, help="Custom document.db path")
 
     return parser
 
@@ -380,9 +380,10 @@ def _handle_restore(args: argparse.Namespace, db_path: Optional[Path]) -> int:
 
 def _handle_compact_ledger(args: argparse.Namespace, db_path: Optional[Path]) -> int:
     """Handles state ledger compaction subcommand."""
+    archive_p = Path(args.archive_dir) if args.archive_dir else None
     res = compact_state_ledger(
         ledger_path=Path(args.ledger),
-        archive_dir=Path(args.archive_dir),
+        archive_dir=archive_p,
         threshold=args.threshold,
         keep_recent=args.keep,
         db_path=db_path,
@@ -393,7 +394,7 @@ def _handle_compact_ledger(args: argparse.Namespace, db_path: Optional[Path]) ->
         return 0
     if res.compacted:
         sys.stdout.write(
-            f"STATE_COMPACTED: {res.pruned_count} task(s) archived to {res.archive_path} "
+            f"STATE_COMPACTED: {res.pruned_count} task(s) compacted to {res.archive_path} "
             f"(Snapshot: {res.snapshot_id})\n"
         )
     else:

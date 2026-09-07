@@ -51,7 +51,7 @@ SAMPLE_LEDGER_HEADER = (
     "```mermaid\n"
     "flowchart TD\n"
     '    subgraph ColPromoted ["5. PROMOTED (Recent 5 Active Horizon)"]\n'
-    '        PRM_ARCH["TASK-001..026: Archived to cortex.db and docs-archived"]\n'
+    '        PRM_ARCH["TASK-001..026: Archived to document.db (state_revisions)"]\n'
 )
 
 SAMPLE_KANBAN_NODES = (
@@ -157,6 +157,30 @@ class TestStateCompactorUnit(unittest.TestCase):
         remaining_entries = extract_promoted_table_rows(self.ledger_path.read_text(encoding="utf-8"))
         self.assertEqual(len(remaining_entries), 5)
 
+    def test_compact_state_ledger_without_archive_dir(self) -> None:
+        """Positive test: Compacts ledger and snapshots to DB without creating markdown files."""
+        report = compact_state_ledger(
+            ledger_path=self.ledger_path,
+            archive_dir=None,
+            threshold=10,
+            keep_recent=5,
+            db_path=self.db_path,
+        )
+        self.assertTrue(report.compacted)
+        self.assertEqual(report.pruned_count, 5)
+        self.assertEqual(report.retained_count, 5)
+        self.assertIsNotNone(report.snapshot_id)
+        self.assertEqual(report.archive_path, "document.db (state_revisions)")
+
+        # Verify no files created in archive_dir
+        self.assertFalse(self.archive_dir.exists())
+
+        # Verify compacted ledger has only 5 promoted rows remaining
+        remaining_entries = extract_promoted_table_rows(self.ledger_path.read_text(encoding="utf-8"))
+        self.assertEqual(len(remaining_entries), 5)
+        ledger_text = self.ledger_path.read_text(encoding="utf-8")
+        self.assertIn("TASK-001..031: Archived to document.db (state_revisions)", ledger_text)
+
     def test_generate_archive_markdown_format(self) -> None:
         """Positive test: Verifies archive markdown conforms to YAML frontmatter standard."""
         entries = extract_promoted_table_rows(self.sample_content)[:2]
@@ -224,6 +248,25 @@ class TestStateCompactorUnit(unittest.TestCase):
         )
         self.assertEqual(len(extract_promoted_table_rows(empty_table)), 0)
         self.assertEqual(len(extract_promoted_table_rows("")), 0)
+        self.assertEqual(len(extract_promoted_table_rows("No table header here")), 0)
+        self.assertEqual(len(extract_promoted_table_rows("### 3.2 Current State Task Ledger\n| only header |")), 0)
+
+    def test_negative_compact_empty_or_whitespace_ledger(self) -> None:
+        """Negative test: Compacting empty or whitespace ledger handles fail-open without crash."""
+        empty_file = self.work_dir / "EMPTY_STATE.md"
+        empty_file.write_text("   \n\n   ", encoding="utf-8")
+        report = compact_state_ledger(
+            ledger_path=empty_file,
+            archive_dir=None,
+            threshold=10,
+            keep_recent=5,
+            db_path=self.db_path,
+        )
+        self.assertFalse(report.compacted)
+        self.assertEqual(report.pruned_count, 0)
+        self.assertEqual(report.retained_count, 0)
+        self.assertIsNone(report.snapshot_id)
+        self.assertIn("below threshold", str(report.explanation))
 
     def test_negative_assertion_ratio(self) -> None:
         """Verifies test suite maintains elevated negative assertion ratio >= 30%."""

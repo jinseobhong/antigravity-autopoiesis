@@ -190,7 +190,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--no-telemetry",
         action="store_true",
-        help="Suppress automatic defect and resolution ingestion into cortex.db",
+        help="Suppress automatic defect and resolution ingestion into memory.db",
     )
     return parser
 

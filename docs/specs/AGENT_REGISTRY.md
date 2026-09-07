@@ -79,7 +79,7 @@ watchdog timeout budgets, and dispatch skills for all 10 registered personas:
 | **`Primary Orchestrator`** | P0 | All Domains | `Mutating (Sovereign)` | N/A | Full Tool Access (Sole Writer) | Direct Execution |
 | **`software-engineer`** | P1 | Code / Systems Review | `Read-Only` | 300s | `view_file`, `grep_search`, `send_message` | `review-implementation` |
 | **`qa-engineer`** | P1 | QA & Verification Review | `Read-Only` | 300s | `view_file`, `grep_search`, `send_message` | `review-implementation` |
-| **`socratic-interviewer`** | P1 | Requirements / Contracts | `Read-Only` | 300s | `view_file`, `grep_search`, `ask_question`, `send_message` | `grill-me` |
+| **`socratic-interviewer`** | P1 | Requirements / Contracts | `Read-Only` | 300s | `view_file`, `grep_search`, `ask_question`, `send_message` | `Direct Dispatch` |
 | **`technical-writer`** | P1 | Docs / Architecture | `Read-Only` | 300s | `view_file`, `grep_search`, `send_message` | `review-documentation` |
 | **`technical-reviewer-architecture`** | P1 | Code / Domain Design | `Read-Only` | 300s | `view_file`, `grep_search`, `send_message` | `review-implementation` |
 | **`technical-reviewer-resilience`** | P1 | Code / Concurrency & I/O | `Read-Only` | 300s | `view_file`, `grep_search`, `send_message` | `review-implementation` |

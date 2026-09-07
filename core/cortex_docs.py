@@ -23,16 +23,9 @@ DEFAULT_SPOOL_PATH = Path("data/spool/cortex_spool.jsonl")
 
 
 def resolve_document_db_path(configured_path: Optional[Path] = None, check_exists: bool = True) -> Path:
-    """Resolves canonical document.db path with backward-compatible legacy fallback."""
+    """Resolves canonical document.db path."""
     if configured_path is not None:
         return Path(configured_path)
-    if check_exists:
-        if DEFAULT_DOCUMENT_DB_PATH.exists():
-            return DEFAULT_DOCUMENT_DB_PATH
-        if DEFAULT_CORTEX_DB_PATH.exists():
-            return DEFAULT_CORTEX_DB_PATH
-        if LEGACY_CORTEX_DB_PATH.exists():
-            return LEGACY_CORTEX_DB_PATH
     return DEFAULT_DOCUMENT_DB_PATH
 
 

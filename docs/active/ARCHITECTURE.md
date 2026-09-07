@@ -146,8 +146,6 @@ graph TB
     subgraph GitTracked["Git-Tracked Artifacts (SSOT)"]
         Seed["data/memory_seed.jsonl
 (Line-delimited JSON Text SSOT)"]
-        ArchMarkdown["docs/archived/*.md
-(Historical Task Markdown)"]
     end
 
     subgraph GitIgnoredStorage["Git-Ignored Runtime Storage (Local Fast SQLite)"]
@@ -170,7 +168,6 @@ graph TB
     EpisodicTable -.->|"Deterministic Export"| Seed
     ShadowGrounding["Shadow Grounding (<1.3ms)"] -->|"Read-only connection"| EpisodicTable
     StateCompactor["State Ledger Compactor"] -->|"Snapshot"| StateRevs
-    StateCompactor -->|"Export Archive"| ArchMarkdown
 ```
 
 #### Physical Payload Asymmetry & Cache Isolation
@@ -405,8 +402,8 @@ python -m core.cortex compact-ledger --target docs/active/CURRENT_STATE.md
 2. **Deterministic Epistemic Snapshot (`core/cortex_docs.py`)**:
    - Prior to modifying the ledger, `snapshot_state_ledger()` captures the complete raw markdown into `state_revisions` in `data/document.db`.
    - The revision is immediately indexed into `fts_archive_search` virtual table, enabling instant full-text search across all historical tasks via `python -m core.cortex query-archive "<query>"`.
-3. **Physical Historical Archive Document**:
-   - Pruned tasks are serialized into structured markdown archives under `docs/archived/` (e.g. `TASK_ARCHIVE_027_030.md`), preserving audit trails and verification evidence permanently in git.
+3. **Zero-Bloat Database Archiving**:
+   - Pruned historical tasks are persisted directly into `document.db` snapshots (`state_revisions` and `fts_archive_search`), eliminating redundant physical markdown files on disk while preserving complete searchable task history.
 4. **Mechanical Stop Hook Enforcement**:
    - `check_state_compaction()` intercepts every Stop lifecycle event. If an operator or agent forgets to compact the ledger when >= 10 tasks accumulate, turn conclusion is blocked until compaction executes.
 

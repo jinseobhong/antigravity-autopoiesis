@@ -36,7 +36,7 @@ STATE_COMPACTION_DIRECTIVE_MESSAGE = (
     "[STATE COMPACTION REQUIRED] docs/active/CURRENT_STATE.md contains {count} "
     "promoted tasks (threshold: {threshold}). "
     "Mandatory Compaction Invariant: You MUST compact the state ledger "
-    "(python -m core.cortex compact-ledger) and snapshot to cortex.db before concluding."
+    "(python -m core.cortex compact-ledger) and snapshot to document.db before concluding."
 )
 
 EPHEMERAL_PATTERNS: Tuple[str, ...] = (

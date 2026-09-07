@@ -1,10 +1,10 @@
 """
-State Ledger Rolling Compactor & Cortex Snapshot Engine (core.state_compactor).
+State Ledger Rolling Compactor & Document Snapshot Engine (core.state_compactor).
 
 Enforces token economy by compacting docs/active/CURRENT_STATE.md when promoted tasks
 reach or exceed the configured threshold (default: 10), taking an immutable snapshot
-in cortex.db (state_revisions, fts_archive_search), and archiving older tasks to
-docs/archived/TASK_ARCHIVE_<start>_<end>.md.
+in document.db (state_revisions, fts_archive_search), and pruning older tasks from
+the active ledger.
 """
 
 from __future__ import annotations
@@ -160,7 +160,7 @@ def _build_compacted_content(
     """Replaces pruned tasks in Kanban and Task Ledger with updated archive pointers."""
     updated = content
     # 1. Update PRM_ARCH node in ColPromoted
-    prm_arch_new = f'PRM_ARCH["TASK-001..{last_pruned_num}: Archived to cortex.db and docs/archived"]'
+    prm_arch_new = f'PRM_ARCH["TASK-001..{last_pruned_num}: Archived to document.db (state_revisions)"]'
     updated = re.sub(r'PRM_ARCH\["[^"]+"\]', prm_arch_new, updated)
 
     # 2. Remove pruned Kanban nodes
@@ -175,7 +175,7 @@ def _build_compacted_content(
     # 3. Update summary row and remove pruned rows in Task Ledger table
     summary_new = (
         f"| *`TASK-001..{last_pruned_num}`* | "
-        f"*Archived to cortex.db and docs/archived/TASK_ARCHIVE_*.md* | "
+        f"*Archived to document.db (state_revisions snapshot)* | "
         f"`ARCHIVED` | - | Multiple | Platform Team | 100% CI pass; Trunk merged; Knowledge persisted |"
     )
     updated = re.sub(r"\|\s*\*`?TASK-001\.\.[^|]+\|[^|\n]+\|", summary_new + " |", updated)
@@ -189,7 +189,7 @@ def _build_compacted_content(
 
 def compact_state_ledger(
     ledger_path: Path,
-    archive_dir: Path,
+    archive_dir: Optional[Path] = None,
     threshold: int = 10,
     keep_recent: int = 5,
     db_path: Optional[Path] = None,
@@ -200,7 +200,6 @@ def compact_state_ledger(
     Evaluates promoted tasks in CURRENT_STATE.md and executes compaction if >= threshold.
     """
     ledger_path = Path(ledger_path)
-    archive_dir = Path(archive_dir)
     if not ledger_path.exists():
         return StateCompactionReport(
             compacted=False,
@@ -255,22 +254,27 @@ def compact_state_ledger(
             explanation="No older entries available to prune",
         )
 
-    # 3. Author archive document
+    # 3. Optional archive document if archive_dir is provided
     start_id = to_prune[0].task_id
     end_id = to_prune[-1].task_id
-    archive_dir.mkdir(parents=True, exist_ok=True)
-    archive_file = archive_dir / f"TASK_ARCHIVE_{start_id.replace('TASK-', '')}_{end_id.replace('TASK-', '')}.md"
-    archive_md = generate_archive_markdown(to_prune, start_id, end_id)
-    archive_file.write_text(archive_md, encoding="utf-8")
+    archive_file_str: Optional[str] = None
+    if archive_dir is not None:
+        target_dir = Path(archive_dir)
+        target_dir.mkdir(parents=True, exist_ok=True)
+        archive_file = target_dir / f"TASK_ARCHIVE_{start_id.replace('TASK-', '')}_{end_id.replace('TASK-', '')}.md"
+        archive_md = generate_archive_markdown(to_prune, start_id, end_id)
+        archive_file.write_text(archive_md, encoding="utf-8")
+        archive_file_str = str(archive_file)
 
     # 4. Record episodic memory trace
+    archive_desc = f"to {archive_file_str}" if archive_file_str else "to document.db snapshot"
     record_event(
         outcome="SUCCESS",
         component="state_ledger",
         trigger_tokens=f"Promoted task count {total_count} >= threshold {threshold}",
         directive=(
             f"Compacted state ledger to document.db snapshot ({rev.revision_id}) and "
-            f"archived {len(to_prune)} tasks ({start_id}..{end_id}) to {archive_file.name}."
+            f"archived {len(to_prune)} tasks ({start_id}..{end_id}) {archive_desc}."
         ),
         solution=f"Pruned {len(to_prune)} tasks, retained recent {len(to_retain)} tasks.",
         validation="100% token preservation; document.db synced",
@@ -291,9 +295,8 @@ def compact_state_ledger(
         pruned_count=len(to_prune),
         retained_count=len(to_retain),
         snapshot_id=rev.revision_id,
-        archive_path=str(archive_file),
+        archive_path=archive_file_str or "document.db (state_revisions)",
         explanation=(
-            f"Successfully compacted {len(to_prune)} tasks into {archive_file.name} "
-            f"and cortex snapshot {rev.revision_id}."
+            f"Successfully compacted {len(to_prune)} tasks into document.db snapshot {rev.revision_id}."
         ),
     )

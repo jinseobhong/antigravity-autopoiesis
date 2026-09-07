@@ -21,7 +21,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 try:
     from core.cortex_docs import (
-        DEFAULT_CORTEX_DB_PATH,
         DEFAULT_SPOOL_PATH,
         get_connection,
         _spool_record,
@@ -34,7 +33,6 @@ try:
     )
 except ModuleNotFoundError:
     from sandbox.core.cortex_docs import (
-        DEFAULT_CORTEX_DB_PATH,
         DEFAULT_SPOOL_PATH,
         get_connection,
         _spool_record,

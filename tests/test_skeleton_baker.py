@@ -307,7 +307,13 @@ class TestSkeletonBakerFunctional(unittest.TestCase):
         if not Path("core/skeleton_baker.py").exists():
             target_module = "sandbox.core.skeleton_baker"
 
-        cmd = [sys.executable, "-m", target_module]
+        cmd = [
+            sys.executable,
+            "-m",
+            target_module,
+            "--output-dir",
+            str(self.output_dir),
+        ]
         result = subprocess.run(
             cmd,
             stdout=subprocess.PIPE,

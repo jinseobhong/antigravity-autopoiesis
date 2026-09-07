@@ -278,34 +278,22 @@ def resolve_cortex_db_path(configured_path: Optional[Path] = None, check_exists:
 
 def resolve_memory_db_path(configured_path: Optional[Path] = None, check_exists: bool = True) -> Path:
     """
-    Resolves canonical memory.db path with fallback to cortex.db if memory.db is absent.
+    Resolves canonical memory.db path.
     Conforms to [INV-SPLIT-01] and [INV-SPLIT-02].
     """
     if configured_path is not None:
         return Path(configured_path)
-    canonical = CanonicalPaths.DATA_MEMORY_DB
-    fallback = CanonicalPaths.DATA_CORTEX_DB
-    if canonical.exists():
-        return canonical
-    if fallback.exists():
-        return fallback
-    return canonical
+    return CanonicalPaths.DATA_MEMORY_DB
 
 
 def resolve_document_db_path(configured_path: Optional[Path] = None, check_exists: bool = True) -> Path:
     """
-    Resolves canonical document.db path with fallback to cortex.db if document.db is absent.
+    Resolves canonical document.db path.
     Conforms to [INV-SPLIT-01] and [INV-SPLIT-03].
     """
     if configured_path is not None:
         return Path(configured_path)
-    canonical = CanonicalPaths.DATA_DOCUMENT_DB
-    fallback = CanonicalPaths.DATA_CORTEX_DB
-    if canonical.exists():
-        return canonical
-    if fallback.exists():
-        return fallback
-    return canonical
+    return CanonicalPaths.DATA_DOCUMENT_DB
 
 
 def _audit_root_entries(root: Path) -> Tuple[List[PathViolation], int]:
